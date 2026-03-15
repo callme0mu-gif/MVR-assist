@@ -34,7 +34,7 @@
   .card-title{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.3px;text-transform:uppercase;flex:1}
   .card-toggle{font-size:10px;color:var(--text3);transition:transform .2s}
   .card-toggle.open{transform:rotate(180deg)}
-  .card-body{padding:14px;display:flex;flex-direction:column;gap:10px;min-height:40px}
+  .card-body{padding:14px;display:flex;flex-direction:column;gap:10px;max-height:520px;overflow-y:auto}
   .collapsed .card-body{display:none}
 
   .field{display:flex;flex-direction:column;gap:4px}
@@ -274,7 +274,7 @@
     <div class="card-body" style="padding-bottom:4px;max-height:none;overflow:visible">
       <button class="gen-all-btn" id="genAllBtn" onclick="generateAllComments()">✦ 입력된 항목 전체 AI 코멘트 생성</button>
     </div>
-    <div class="card-body" id="checklistBody" style="padding-top:4px"></div>
+    <div class="card-body" id="checklistBody" style="padding-top:4px;max-height:600px;overflow-y:auto"></div>
   </div>
 
   <!-- ICF SUMMARY -->
@@ -1108,7 +1108,7 @@ function buildRTFAndDownload(data, btn) {
 // ============================================================
 const ITEM_CONTEXT = {
   '1-1': { topic: '시험대상자 등록 현황', doc: 'PI 면담 및 등록 현황 확인' },
-  '1-2': { topic: '시험대상자 모집 절차 문제', doc: 'PI 면담', reversed: true },
+  '1-2': { topic: '시험대상자 모집 절차 문제', doc: 'PI 면담' },
   '2-1': { topic: 'Delegation Log 갱신 및 업무 위임 현황', doc: 'Delegation Log (ISF 내 보관)' },
   '2-2': { topic: '연구진 변경 여부', doc: 'Delegation Log' },
   '2-4': { topic: 'IRB 보고서·신청서 제공 여부', doc: 'IRB 신청서 및 통지서 (ISF 내 보관)' },
@@ -1121,7 +1121,7 @@ const ITEM_CONTEXT = {
   '4-3': { topic: '새로운 안전성 정보 전달 및 보고 여부', doc: 'DSUR, Dear Dr. Letter, ISF' },
   '5-1': { topic: '최신 승인 문서 사용 여부', doc: 'Protocol, IB, CRF, ICF (ISF 내 보관)' },
   '5-2': { topic: 'IP 투여방법 설명 및 복약 관리', doc: 'EMR, 복약일지' },
-  '5-3': { topic: '위반사항 확인 여부', doc: '해당 없음', reversed: true },
+  '5-3': { topic: '위반사항 없음 확인', doc: '해당 없음' },
   '6-1': { topic: 'CRF와 근거문서 일치 여부 (SDV)', doc: 'EMR, 설문지, worksheet, logs' },
   '6-2': { topic: 'CRF 적시 작성 및 수정 적절성', doc: 'EDC' },
   '6-4': { topic: '근거문서 최신 보관 여부', doc: 'Subject Binder 및 ISF' },
@@ -1184,8 +1184,8 @@ async function generateComment(code, btnEl) {
 3. PI명은 "${pi || 'PI'}", CRC명은 "${crc || 'CRC'}"로 자연스럽게 포함
 4. "본원", "본 모니터링 방문 시", "확인함", "ISF 내 보관" 등 실제 MVR 표현 사용
 5. 영문 약어(ISF, EDC, CRF, IP, IRB, SAE, SDV 등)는 한글 번역 없이 그대로 사용
-6. 결과가 "예"이면: ${itemData.reversed ? '문제/이슈가 확인된 경우이므로, 구체적으로 어떤 문제가 확인됐고 어떤 조치를 취했는지 서술' : '적절히 이루어지고 있음을 확인한 내용 서술'}
-7. 결과가 "아니오"이면: ${itemData.reversed ? '문제가 없음을 확인한 내용 서술' : '어떤 문제가 있고 어떤 조치를 취했는지, 다음 방문 시 재확인 예정 포함'}
+6. 결과가 "예"이면: 적절히 확인된 사항 서술
+7. 결과가 "아니오"이면: 어떤 문제가 있고 어떤 조치를 취했는지, 다음 방문 시 재확인 예정 포함
 
 [현재 항목 정보]
 - 항목 코드: ${code}
@@ -1234,9 +1234,7 @@ function getFallbackComment(code, val, pi, crc) {
   const doc = ctx.doc || '관련 문서';
   const piStr = pi ? pi + ' PI' : '시험책임자';
   const crcStr = crc ? crc + ' CRC' : 'CRC';
-  // reversed 항목: 예=문제있음, 아니오=문제없음
-  const isIssue = ctx.reversed ? (val === '예') : (val === '아니오');
-  if (!isIssue) {
+  if (val === '예') {
     return code + ' ' + (ctx.topic || '해당 항목') + '에 대하여 ' + doc + '를 통해 검토하였으며, ' + piStr + ' 및 ' + crcStr + '와의 면담을 통해 적절히 이루어지고 있음을 확인함.';
   } else {
     return code + ' ' + (ctx.topic || '해당 항목') + ' 관련하여 ' + doc + ' 검토 결과 이슈 확인됨. ' + piStr + ' 및 ' + crcStr + '에게 확인 및 조치 요청함. 다음 모니터링 방문 시 재확인 예정임.';
