@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRA Smart Monitor — MVR 초안 생성기</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+KR:wght@300;400;500;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+  :root {
+    --bg:#0d0f14;--surface:#141720;--surface2:#1c2030;--border:#252b3a;
+    --accent:#4f8ef7;--accent2:#3dd9a4;--warn:#f7934f;--danger:#f75f5f;
+    --text:#e8ecf5;--text2:#7a8499;--text3:#4a5268;
+    --mono:'IBM Plex Mono',monospace;--sans:'Noto Sans KR',sans-serif;--head:'Space Grotesk',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
+  .topbar-logo{font-family:var(--head);font-size:15px;font-weight:700;color:var(--accent);white-space:nowrap}
+  .topbar-logo span{color:var(--text2);font-weight:400}
+  .divider{width:1px;height:20px;background:var(--border)}
+  .tab-nav{display:flex;gap:3px}
+  .tab-btn{padding:5px 13px;border-radius:6px;background:none;border:none;color:var(--text2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+  .tab-btn:hover{background:var(--surface2);color:var(--text)}
+  .tab-btn.active{background:var(--accent);color:#fff;font-weight:500}
+  .soon-badge{font-size:9px;background:rgba(247,147,79,.2);color:var(--warn);padding:1px 5px;border-radius:3px;margin-left:4px}
+  .main{display:flex;height:calc(100vh - 52px)}
+
+  /* FORM */
+  .form-panel{width:460px;min-width:380px;border-right:1px solid var(--border);overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .card-header{padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .card-header:hover{background:#20263a}
+  .card-num{font-family:var(--mono);font-size:10px;color:var(--accent);background:rgba(79,142,247,.12);padding:2px 6px;border-radius:4px}
+  .card-title{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.3px;text-transform:uppercase;flex:1}
+  .card-toggle{font-size:10px;color:var(--text3);transition:transform .2s}
+  .card-toggle.open{transform:rotate(180deg)}
+  .card-body{padding:14px;display:flex;flex-direction:column;gap:10px}
+  .collapsed .card-body{display:none}
+
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  label{font-size:10px;font-weight:500;color:var(--text2);letter-spacing:.5px;text-transform:uppercase}
+  input[type=text],input[type=date],select,textarea{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:13px;padding:7px 9px;outline:none;transition:border-color .15s;width:100%}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  textarea{resize:vertical;min-height:55px;line-height:1.6}
+  select option{background:var(--surface2)}
+
+  .enroll-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .enroll-cell{display:flex;flex-direction:column;gap:3px;align-items:center}
+  .enroll-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;text-align:center}
+  .enroll-cell input{text-align:center;padding:6px 3px!important;font-family:var(--mono)!important;font-size:14px!important;font-weight:700!important}
+
+  /* CHECKLIST */
+  .chk-section{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:6px;padding-bottom:3px;border-bottom:1px solid var(--border)}
+  .chk-item{padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);transition:border-color .15s;margin-top:4px}
+  .chk-item.issue{border-color:rgba(247,93,93,.4);background:rgba(247,93,93,.04)}
+  .chk-top{display:flex;align-items:flex-start;gap:8px}
+  .chk-code{font-family:var(--mono);font-size:10px;color:var(--text3);min-width:24px;padding-top:1px}
+  .chk-q{font-size:12px;line-height:1.6;color:var(--text);flex:1}
+  .radio-grp{display:flex;gap:8px;margin-top:5px}
+  .radio-opt{display:flex;align-items:center;gap:3px;cursor:pointer;font-size:11px;color:var(--text2)}
+  .radio-opt input{width:auto}
+  .radio-opt.yes{color:var(--accent2)}
+  .radio-opt.no{color:var(--danger)}
+  .radio-opt.na{color:var(--text3)}
+  .cmt-box{margin-top:7px;padding-top:7px;border-top:1px solid var(--border);display:none}
+
+  /* DYNAMIC ROWS */
+  .dyn-row{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px;position:relative;display:flex;flex-direction:column;gap:7px}
+  .del-btn{position:absolute;top:7px;right:7px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;transition:all .15s;line-height:1}
+  .del-btn:hover{color:var(--danger);background:rgba(247,93,93,.1)}
+  .add-btn{width:100%;padding:8px;background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text3);font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--sans);margin-top:4px}
+  .add-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,142,247,.05)}
+
+  /* FU */
+  .fu-header{display:flex;align-items:center;gap:7px}
+  .fu-badge{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600}
+  .fu-badge.old{background:rgba(79,142,247,.15);color:var(--accent)}
+  .fu-badge.new{background:rgba(61,217,164,.15);color:var(--accent2)}
+  .fu-status{margin-left:auto;padding:3px 7px;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;outline:none}
+
+  /* GEN BTN */
+  .gen-wrap{display:flex;gap:8px}
+  .gen-btn{flex:1;padding:13px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:var(--head);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s}
+  .gen-btn:hover{background:#3a7de8;transform:translateY(-1px);box-shadow:0 8px 24px rgba(79,142,247,.3)}
+  .docx-btn{padding:13px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--head);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .docx-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+  .docx-btn:disabled{opacity:.5;cursor:not-allowed}
+
+  /* PREVIEW */
+  .preview-panel{flex:1;overflow-y:auto;padding:22px;background:#0a0c10}
+  .prev-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .prev-title{font-family:var(--head);font-size:15px;font-weight:700}
+  .prev-actions{display:flex;gap:7px}
+  .btn-sm{padding:5px 13px;border-radius:6px;font-size:12px;font-family:var(--sans);cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);transition:all .15s;font-weight:500}
+  .btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-sm.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn-sm.primary:hover{background:#3a7de8}
+
+  /* REPORT DOC */
+  .report-doc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:30px;line-height:1.8}
+  .r-head{margin-bottom:24px}
+  .r-title{font-family:var(--head);font-size:22px;font-weight:700;color:var(--accent);letter-spacing:-.5px}
+  .r-sub{font-family:var(--mono);font-size:12px;color:var(--text2);margin-top:4px}
+  .r-sec{margin-bottom:22px}
+  .r-sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);font-family:var(--mono)}
+  .r-kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .r-kv{display:flex;flex-direction:column;gap:2px}
+  .r-klbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+  .r-kval{font-size:13px;color:var(--text);font-weight:500}
+
+  .r-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px}
+  .r-table th{background:var(--surface2);padding:6px 9px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);font-family:var(--mono);border:1px solid var(--border)}
+  .r-table td{padding:7px 9px;border:1px solid var(--border);color:var(--text);vertical-align:top;line-height:1.6}
+  .r-table tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+
+  .chk-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);gap:8px}
+  .chk-row:last-child{border-bottom:none}
+  .chk-row .cq{font-size:12px;color:var(--text2);flex:1;line-height:1.5}
+  .ca{font-size:10px;font-family:var(--mono);font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap}
+  .ca.yes{background:rgba(61,217,164,.15);color:var(--accent2)}
+  .ca.no{background:rgba(247,93,93,.15);color:var(--danger)}
+  .ca.na{background:rgba(122,132,153,.15);color:var(--text3)}
+  .issue-tag{display:inline-flex;align-items:center;background:rgba(247,93,93,.12);border:1px solid rgba(247,93,93,.3);color:var(--danger);font-size:10px;padding:2px 6px;border-radius:4px;font-family:var(--mono);margin-bottom:3px}
+  .cmt-block{background:rgba(79,142,247,.06);border-left:3px solid var(--accent);padding:6px 11px;border-radius:0 6px 6px 0;font-size:12px;color:var(--text2);line-height:1.7;margin:4px 0 4px 22px}
+
+  .enr-grid-r{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:10px}
+  .enr-cell-r{display:flex;flex-direction:column;gap:3px}
+  .enr-lbl-r{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+  .enr-val-r{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent)}
+
+  .status-resolved{color:var(--accent2);font-weight:600}
+  .status-ongoing{color:var(--warn);font-weight:600}
+  .exp-warn{color:var(--danger);font-weight:600}
+  .exp-ok{color:var(--accent2)}
+  .exp-caution{color:var(--warn);font-weight:600}
+
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:400px;gap:10px;color:var(--text3);text-align:center}
+  .empty-state .icon{font-size:38px;opacity:.35}
+  .empty-state p{font-size:13px;line-height:1.7;max-width:280px}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  ::-webkit-scrollbar{width:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">CRA<span> Smart Monitor</span></div>
+  <div class="divider"></div>
+  <div class="tab-nav">
+    <button class="tab-btn active">📋 MVR 초안</button>
+    <button class="tab-btn" style="opacity:.5">💊 IP Log<span class="soon-badge">SOON</span></button>
+    <button class="tab-btn" style="opacity:.5">🔬 Lab 대조<span class="soon-badge">SOON</span></button>
+  </div>
+</div>
+
+<div class="main">
+<!-- ========== FORM ========== -->
+<div class="form-panel">
+
+  <!-- STUDY INFO -->
+  <div class="card" id="card-study">
+    <div class="card-header" onclick="toggleCard('study')">
+      <span class="card-num">I</span><span class="card-title">Study & Site Information</span>
+      <span class="card-toggle open" id="tog-study">▼</span>
+    </div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field"><label>Sponsor</label><input type="text" id="sponsor" placeholder="㈜노보메디슨"></div>
+        <div class="field"><label>Site No.</label><input type="text" id="siteNo" placeholder="06"></div>
+      </div>
+      <div class="field"><label>기관명</label><input type="text" id="siteName" placeholder="가톨릭대학교 여의도성모병원"></div>
+      <div class="field-row">
+        <div class="field"><label>PI (시험책임자)</label><input type="text" id="pi" placeholder="전영우"></div>
+        <div class="field"><label>CRC</label><input type="text" id="crc" placeholder="이유진"></div>
+      </div>
+      <div class="field"><label>관리약사</label><input type="text" id="pharmacist" placeholder="김민경"></div>
+    </div>
+  </div>
+
+  <!-- VISIT INFO -->
+  <div class="card" id="card-visit">
+    <div class="card-header" onclick="toggleCard('visit')">
+      <span class="card-num">II</span><span class="card-title">Visit Information</span>
+      <span class="card-toggle open" id="tog-visit">▼</span>
+    </div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field"><label>방문 유형</label>
+          <select id="visitType"><option>On-Site</option><option>Telephone</option><option>Remote</option></select>
+        </div>
+        <div class="field"><label>방문 번호</label><input type="text" id="visitNum" placeholder="5"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>방문일</label><input type="date" id="visitDate"></div>
+        <div class="field"><label>이전 방문일</label><input type="date" id="lastVisitDate"></div>
+      </div>
+      <div class="field"><label>이전 방문 구분</label><input type="text" id="lastVisitType" placeholder="IMV #3,4"></div>
+    </div>
+  </div>
+
+  <!-- ENROLLMENT -->
+  <div class="card" id="card-enr">
+    <div class="card-header" onclick="toggleCard('enr')">
+      <span class="card-num">P1</span><span class="card-title">Enrollment Status</span>
+      <span class="card-toggle open" id="tog-enr">▼</span>
+    </div>
+    <div class="card-body">
+      <div class="enroll-grid">
+        <div class="enroll-cell"><div class="enroll-lbl">Target</div><input type="text" id="enrTarget" placeholder="0"></div>
+        <div class="enroll-cell"><div class="enroll-lbl">Screened</div><input type="text" id="enrScreened" placeholder="0"></div>
+        <div class="enroll-cell"><div class="enroll-lbl">Scr.Fail</div><input type="text" id="enrFail" placeholder="0"></div>
+        <div class="enroll-cell"><div class="enroll-lbl">Enrolled</div><input type="text" id="enrEnrolled" placeholder="0"></div>
+        <div class="enroll-cell"><div class="enroll-lbl">Ongoing</div><input type="text" id="enrOngoing" placeholder="0"></div>
+        <div class="enroll-cell"><div class="enroll-lbl">Drop-out</div><input type="text" id="enrDropout" placeholder="0"></div>
+        <div class="enroll-cell"><div class="enroll-lbl">Completed</div><input type="text" id="enrCompleted" placeholder="0"></div>
+      </div>
+      <div class="field"><label>Comments</label><textarea id="enrComment" placeholder="등록 현황 특이사항..."></textarea></div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST -->
+  <div class="card" id="card-chk">
+    <div class="card-header" onclick="toggleCard('chk')">
+      <span class="card-num">P2</span><span class="card-title">Monitoring Checklist</span>
+      <span class="card-toggle open" id="tog-chk">▼</span>
+    </div>
+    <div class="card-body" id="checklistBody"></div>
+  </div>
+
+  <!-- ICF SUMMARY -->
+  <div class="card" id="card-icf">
+    <div class="card-header" onclick="toggleCard('icf')">
+      <span class="card-num">ICF</span><span class="card-title">ICF Summary</span>
+      <span class="card-toggle open" id="tog-icf">▼</span>
+    </div>
+    <div class="card-body">
+      <div id="icfList"></div>
+      <button class="add-btn" onclick="addICF()">+ 대상자 ICF 추가</button>
+      <div class="field"><label>Comments</label><textarea id="icfComment" placeholder="ICF 관련 특이사항..."></textarea></div>
+    </div>
+  </div>
+
+  <!-- SAE -->
+  <div class="card" id="card-sae">
+    <div class="card-header" onclick="toggleCard('sae')">
+      <span class="card-num">SAE</span><span class="card-title">SAE Summary</span>
+      <span class="card-toggle open" id="tog-sae">▼</span>
+    </div>
+    <div class="card-body">
+      <div id="saeList"></div>
+      <button class="add-btn" onclick="addSAE()">+ SAE 추가</button>
+    </div>
+  </div>
+
+  <!-- SDV -->
+  <div class="card" id="card-sdv">
+    <div class="card-header" onclick="toggleCard('sdv')">
+      <span class="card-num">SDV</span><span class="card-title">SDV Summary</span>
+      <span class="card-toggle open" id="tog-sdv">▼</span>
+    </div>
+    <div class="card-body">
+      <div id="sdvList"></div>
+      <button class="add-btn" onclick="addSDV()">+ SDV 항목 추가</button>
+    </div>
+  </div>
+
+  <!-- IP -->
+  <div class="card" id="card-ip">
+    <div class="card-header" onclick="toggleCard('ip')">
+      <span class="card-num">IP</span><span class="card-title">IP 재고 현황</span>
+      <span class="card-toggle open" id="tog-ip">▼</span>
+    </div>
+    <div class="card-body">
+      <div id="ipList"></div>
+      <button class="add-btn" onclick="addIP()">+ IP 추가</button>
+    </div>
+  </div>
+
+  <!-- FOLLOW-UP -->
+  <div class="card" id="card-fu">
+    <div class="card-header" onclick="toggleCard('fu')">
+      <span class="card-num">F/U</span><span class="card-title">Follow-up Items</span>
+      <span class="card-toggle open" id="tog-fu">▼</span>
+    </div>
+    <div class="card-body">
+      <div style="font-size:10px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">▸ Old (이전 방문 이월)</div>
+      <div id="fuOldList"></div>
+      <button class="add-btn" onclick="addFU('old')">+ Old F/U 추가</button>
+      <div style="font-size:10px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin:10px 0 4px">▸ New (이번 방문 신규)</div>
+      <div id="fuNewList"></div>
+      <button class="add-btn" onclick="addFU('new')">+ New F/U 추가</button>
+    </div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="gen-wrap">
+    <button class="gen-btn" onclick="generateReport()">✦ 보고서 미리보기</button>
+    <button class="docx-btn" id="docxBtn" onclick="downloadDocx()">⬇ .docx</button>
+  </div>
+  <div style="height:20px"></div>
+
+</div><!-- /form-panel -->
+
+<!-- ========== PREVIEW ========== -->
+<div class="preview-panel">
+  <div class="prev-header">
+    <div class="prev-title">보고서 미리보기</div>
+    <div class="prev-actions">
+      <button class="btn-sm" onclick="copyReport()">📋 텍스트 복사</button>
+      <button class="btn-sm primary" onclick="generateReport()">↺ 새로고침</button>
+    </div>
+  </div>
+  <div id="reportOutput">
+    <div class="empty-state">
+      <div class="icon">📋</div>
+      <p>왼쪽에서 정보를 입력하고<br><b>보고서 미리보기</b> 버튼을 눌러주세요.</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ============================================================
+// CHECKLIST DATA
+// ============================================================
+const CHECKLIST = [
+  { section:'1. 시험 진행 상황', items:[
+    {code:'1-1', q:'본 기관은 시험대상자 등록이 계약/합의된 목표에 맞게 진행되고 있는가?'},
+    {code:'1-2', q:'시험대상자 모집 절차 관련하여 확인된 문제가 있는가?'},
+  ]},
+  { section:'2. 업무 위임 관련', items:[
+    {code:'2-1', q:'위임 받은 업무 범위 내에서 업무가 이루어지고 있고, Delegation Log가 적절히 갱신되고 있는가?'},
+    {code:'2-2', q:'변경된 연구진이 있는가?'},
+    {code:'2-4', q:'업무 위임을 받은 시험자는 임상시험계획서 및 관련 법령에 따라 보고서·통보서·신청서 등을 제공하고 있는가?'},
+  ]},
+  { section:'3. 시험대상자의 권리보호', items:[
+    {code:'3-1', q:'시험책임자는 규제기관 및 IRB의 승인을 득한 최신의 ICF를 이용하여 동의를 취득하고 있는가?'},
+    {code:'3-2', q:'시험대상자 및/또는 대리인에게 서명된 동의서 사본을 제공하였는가?'},
+    {code:'3-3', q:'서면 동의 절차가 임상시험 관련된 절차의 수행 전에 적절히 이루어졌는가?'},
+    {code:'3-4', q:'동의서의 개정이 이루어진 경우 진행 중인 시험대상자들은 재동의를 취득하였는가?'},
+  ]},
+  { section:'4. 시험대상자의 안전', items:[
+    {code:'4-1', q:'시험자는 이상사례에 대해 적절히 평가한 후 근거문서와 CRF에 적절히 기록하였는가? (AE, 병용약물 및 병발질환 등)'},
+    {code:'4-2', q:'SAE가 발생한 경우 계획서에서 정한 절차에 따라 의뢰자와 IRB에 적절하게 보고되었는가?'},
+    {code:'4-3', q:'새로운 안전성 정보(SAE Report, Dear Dr. Letters, SUSAR)는 시험책임자에게 전달 후 IRB 및 규제기관에 보고되었는가?'},
+  ]},
+  { section:'5. 임상시험계획서 준수', items:[
+    {code:'5-1', q:'모든 연구진은 가장 최근에 승인(식약처, IRB)된 Protocol/IB/CRF/ICF로 임상시험을 진행하고 있는가?'},
+    {code:'5-2', q:'시험자 또는 관리약사는 IP의 정확한 투여/적용방법을 설명하고, 시험대상자를 적절히 관리하고 있는가?'},
+    {code:'5-3', q:'본 모니터링 방문에서 위반사항이 확인된 경우 시험책임자에게 알리었는가?'},
+  ]},
+  { section:'6. 증례기록서 및 기본문서 관리', items:[
+    {code:'6-1', q:'작성된 CRF 상의 내용은 근거문서(Source Document)와 일치하는가?'},
+    {code:'6-2', q:'증례기록서가 대상자 방문일로부터 적절한 기간 내에 작성되었고, 수정이 적절히 이루어지고 있는가?'},
+    {code:'6-4', q:'모든 근거문서가 정확하고 완전하게 최신 자료로 적절히 보관 및 관리되고 있는가?'},
+    {code:'6-5', q:'이전 방문 시 해결되지 않은 오류/미해결 쿼리에 대하여 연구진은 적절히 보완하였는가?'},
+    {code:'6-7', q:'시험자 파일(ISF)을 적절히 업데이트하고 관리하고 있는가?'},
+  ]},
+  { section:'8. 임상시험용 의약품', items:[
+    {code:'8-1', q:'임상시험용 의약품의 재고 및 사용기한이 충분한가?'},
+    {code:'8-2', q:'IP 수불기록(Inventory Log, Accountability Log), 처방전 등이 시험대상자별 투약 기록과 일치하는가?'},
+    {code:'8-3', q:'IP의 보관 및 관리(장소, 온도 모니터링, 유효기간)가 적절하게 이루어지고 있는가?'},
+    {code:'8-4', q:'IP의 폐기 또는 반납에 대하여 적절히 문서화되어 있는가?'},
+  ]},
+  { section:'9. IRB', items:[
+    {code:'9-1', q:'이전 방문 이후, IRB에 심의 접수된 건이 있는가? (Protocol, IB, CRF, ICF 변경, SAE, 중간보고, 위반보고 등)'},
+    {code:'9-2', q:'9-1이 "예"에 해당할 경우 IRB 심의 건이 승인되었는가?'},
+    {code:'9-3', q:'연구 승인기간 만료 전, IRB에 지속심의가 제출 및 승인되었는가?'},
+    {code:'9-4', q:'연구진은 갱신된 IRB 위원명단 및 관련 문서를 확보하고 있는가?'},
+  ]},
+];
+
+// ============================================================
+// BUILD CHECKLIST
+// ============================================================
+function buildChecklist() {
+  const body = document.getElementById('checklistBody');
+  body.innerHTML = '';
+  CHECKLIST.forEach(sec => {
+    const st = document.createElement('div');
+    st.className = 'chk-section';
+    st.textContent = sec.section;
+    body.appendChild(st);
+    sec.items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'chk-item';
+      div.id = 'ci_' + item.code;
+      div.innerHTML = `
+        <div class="chk-top">
+          <span class="chk-code">${item.code}</span>
+          <div class="chk-q" style="flex:1">
+            <div>${item.q}</div>
+            <div class="radio-grp">
+              <label class="radio-opt yes"><input type="radio" name="r_${item.code}" value="예"> 예</label>
+              <label class="radio-opt no"><input type="radio" name="r_${item.code}" value="아니오"> 아니오</label>
+              <label class="radio-opt na"><input type="radio" name="r_${item.code}" value="N/A" checked> N/A</label>
+            </div>
+            <div class="cmt-box" id="cb_${item.code}">
+              <textarea id="ct_${item.code}" placeholder="Comments..."></textarea>
+            </div>
+          </div>
+        </div>`;
+      body.appendChild(div);
+      div.querySelectorAll('input[type=radio]').forEach(r => {
+        r.addEventListener('change', () => {
+          const box = document.getElementById('cb_' + item.code);
+          box.style.display = r.value !== 'N/A' ? 'block' : 'none';
+          div.className = r.value === '아니오' ? 'chk-item issue' : 'chk-item';
+        });
+      });
+    });
+  });
+}
+
+// ============================================================
+// TOGGLE CARD
+// ============================================================
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  const tog = document.getElementById('tog-' + id);
+  card.classList.toggle('collapsed');
+  tog.classList.toggle('open');
+}
+
+// ============================================================
+// DYNAMIC ROWS
+// ============================================================
+let cnt = { icf:0, sae:0, sdv:0, ip:0, fu:0 };
+
+function addICF() {
+  cnt.icf++;
+  const id = 'icf_' + cnt.icf;
+  const div = document.createElement('div');
+  div.className = 'dyn-row'; div.id = id;
+  div.innerHTML = `
+    <button class="del-btn" onclick="document.getElementById('${id}').remove()">✕</button>
+    <div class="field-row">
+      <div class="field"><label>Subject No.</label><input type="text" id="${id}_subj" placeholder="S06005"></div>
+      <div class="field"><label>서명일</label><input type="date" id="${id}_date"></div>
+    </div>
+    <div class="field"><label>ICF Type / Version</label><input type="text" id="${id}_ver" placeholder="Main ICF v6.0_02Oct2025"></div>
+    <div class="field"><label>구분 (Remarks)</label>
+      <select id="${id}_rem">
+        <option value="Initial">Initial</option>
+        <option value="재동의">재동의</option>
+        <option value="인체유래물 동의">인체유래물 동의</option>
+        <option value="기타">기타</option>
+      </select>
+    </div>`;
+  document.getElementById('icfList').appendChild(div);
+}
+
+function addSAE() {
+  cnt.sae++;
+  const id = 'sae_' + cnt.sae;
+  const div = document.createElement('div');
+  div.className = 'dyn-row'; div.id = id;
+  div.innerHTML = `
+    <button class="del-btn" onclick="document.getElementById('${id}').remove()">✕</button>
+    <div class="field-row">
+      <div class="field"><label>Subject No.</label><input type="text" id="${id}_subj" placeholder="S06005"></div>
+      <div class="field"><label>SAE Name</label><input type="text" id="${id}_name" placeholder="Rash G3"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>발생일</label><input type="date" id="${id}_start"></div>
+      <div class="field"><label>인지일</label><input type="date" id="${id}_aware"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>IRB 보고일</label><input type="date" id="${id}_irb"></div>
+      <div class="field"><label>Sponsor 보고일</label><input type="date" id="${id}_sponsor"></div>
+    </div>
+    <div class="field"><label>현재 상태</label>
+      <select id="${id}_status">
+        <option>진행 중</option><option>회복됨</option><option>회복됨(후유증 있음)</option><option>사망</option><option>불명</option>
+      </select>
+    </div>`;
+  document.getElementById('saeList').appendChild(div);
+}
+
+function addSDV() {
+  cnt.sdv++;
+  const id = 'sdv_' + cnt.sdv;
+  const div = document.createElement('div');
+  div.className = 'dyn-row'; div.id = id;
+  div.innerHTML = `
+    <button class="del-btn" onclick="document.getElementById('${id}').remove()">✕</button>
+    <div class="field-row">
+      <div class="field"><label>Subject No.</label><input type="text" id="${id}_subj" placeholder="S06005"></div>
+      <div class="field"><label>Visit No.</label><input type="text" id="${id}_visit" placeholder="SV, C1D1, AE"></div>
+    </div>
+    <div class="field"><label>Review Type</label>
+      <select id="${id}_type">
+        <option value="A">A (Full SDV)</option>
+        <option value="B">B (CRF only)</option>
+        <option value="C">C (Others)</option>
+      </select>
+    </div>
+    <div class="field"><label>Comment</label><textarea id="${id}_cmt" placeholder="SDV 내용 요약..."></textarea></div>`;
+  document.getElementById('sdvList').appendChild(div);
+}
+
+function addIP() {
+  cnt.ip++;
+  const id = 'ip_' + cnt.ip;
+  const div = document.createElement('div');
+  div.className = 'dyn-row'; div.id = id;
+  div.innerHTML = `
+    <button class="del-btn" onclick="document.getElementById('${id}').remove()">✕</button>
+    <div class="field-row">
+      <div class="field"><label>IP명</label><input type="text" id="${id}_name" placeholder="Poselfinib"></div>
+      <div class="field"><label>용량</label><input type="text" id="${id}_dose" placeholder="20mg"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>유효기간</label><input type="date" id="${id}_exp"></div>
+      <div class="field"><label>Lot No.</label><input type="text" id="${id}_lot" placeholder="04931"></div>
+    </div>
+    <div class="field"><label>재고 수량</label><input type="text" id="${id}_stock" placeholder="18"></div>`;
+  document.getElementById('ipList').appendChild(div);
+}
+
+function addFU(type) {
+  cnt.fu++;
+  const id = 'fu_' + cnt.fu;
+  const listId = type === 'old' ? 'fuOldList' : 'fuNewList';
+  const div = document.createElement('div');
+  div.className = 'dyn-row'; div.id = id;
+  div.innerHTML = `
+    <div class="fu-header">
+      <span class="fu-badge ${type}">${type.toUpperCase()} #${cnt.fu}</span>
+      ${type === 'old' ? `<select class="fu-status" id="${id}_status">
+        <option value="N/A">N/A</option>
+        <option value="Resolved">Resolved</option>
+        <option value="Ongoing">Ongoing</option>
+      </select>` : ''}
+      <button class="del-btn" style="position:relative;top:auto;right:auto;margin-left:auto" onclick="document.getElementById('${id}').remove()">✕</button>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Category</label>
+        <select id="${id}_cat">
+          <option>SAE</option><option>ICF</option><option>AE</option><option>IP</option><option>IRB</option><option>SDV</option><option>기타</option>
+        </select>
+      </div>
+      <div class="field"><label>발생일</label><input type="date" id="${id}_date"></div>
+    </div>
+    <div class="field"><label>Description</label><textarea id="${id}_desc" placeholder="이슈 내용..."></textarea></div>
+    <div class="field"><label>Action(s) Taken / Follow-up</label><textarea id="${id}_action" placeholder="조치 내용 및 후속 계획..."></textarea></div>`;
+  document.getElementById(listId).appendChild(div);
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function v(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+function fmtDate(s) {
+  if (!s) return '-';
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${String(d.getDate()).padStart(2,'0')}${m[d.getMonth()]}${d.getFullYear()}`;
+}
+function getChk(code) {
+  const e = document.querySelector(`input[name="r_${code}"]:checked`);
+  return e ? e.value : 'N/A';
+}
+function getCmt(code) { const e = document.getElementById('ct_'+code); return e ? e.value.trim() : ''; }
+
+function collectData() {
+  // checklist
+  const checklist = [];
+  CHECKLIST.forEach(sec => {
+    sec.items.forEach(item => {
+      checklist.push({ code: item.code, q: item.q, val: getChk(item.code), cmt: getCmt(item.code), section: sec.section });
+    });
+  });
+  // icf
+  const icfList = [];
+  document.querySelectorAll('#icfList .dyn-row').forEach(row => {
+    icfList.push({ subj: v(row.id+'_subj'), date: v(row.id+'_date'), version: v(row.id+'_ver'), remarks: v(row.id+'_rem') });
+  });
+  // sae
+  const saeList = [];
+  document.querySelectorAll('#saeList .dyn-row').forEach(row => {
+    saeList.push({ subj: v(row.id+'_subj'), name: v(row.id+'_name'), start: v(row.id+'_start'), aware: v(row.id+'_aware'), irb: v(row.id+'_irb'), sponsor: v(row.id+'_sponsor'), status: v(row.id+'_status') });
+  });
+  // sdv
+  const sdvList = [];
+  document.querySelectorAll('#sdvList .dyn-row').forEach(row => {
+    sdvList.push({ subj: v(row.id+'_subj'), visit: v(row.id+'_visit'), type: v(row.id+'_type'), comment: v(row.id+'_cmt') });
+  });
+  // ip
+  const ipList = [];
+  document.querySelectorAll('#ipList .dyn-row').forEach(row => {
+    ipList.push({ name: v(row.id+'_name'), dose: v(row.id+'_dose'), exp: v(row.id+'_exp'), lot: v(row.id+'_lot'), stock: v(row.id+'_stock') });
+  });
+  // fu
+  const fuOld = [], fuNew = [];
+  document.querySelectorAll('#fuOldList .dyn-row').forEach(row => {
+    fuOld.push({ cat: v(row.id+'_cat'), date: v(row.id+'_date'), desc: v(row.id+'_desc'), action: v(row.id+'_action'), status: v(row.id+'_status') || 'N/A' });
+  });
+  document.querySelectorAll('#fuNewList .dyn-row').forEach(row => {
+    fuNew.push({ cat: v(row.id+'_cat'), date: v(row.id+'_date'), desc: v(row.id+'_desc'), action: v(row.id+'_action') });
+  });
+
+  return {
+    sponsor: v('sponsor'), siteNo: v('siteNo'), siteName: v('siteName'),
+    pi: v('pi'), crc: v('crc'), pharmacist: v('pharmacist'),
+    visitType: v('visitType'), visitNum: v('visitNum'), visitDate: v('visitDate'),
+    lastVisitDate: v('lastVisitDate'), lastVisitType: v('lastVisitType'),
+    enrTarget: v('enrTarget'), enrScreened: v('enrScreened'), enrFail: v('enrFail'),
+    enrEnrolled: v('enrEnrolled'), enrOngoing: v('enrOngoing'), enrDropout: v('enrDropout'), enrCompleted: v('enrCompleted'),
+    enrComment: v('enrComment'), icfComment: v('icfComment'),
+    checklist, icfList, saeList, sdvList, ipList, fuOld, fuNew
+  };
+}
+
+// ============================================================
+// GENERATE PREVIEW
+// ============================================================
+function generateReport() {
+  const d = collectData();
+  const issues = d.checklist.filter(c => c.val === '아니오');
+  const today = new Date();
+
+  // Enrollment cells
+  const enrLabels = ['Target','Screened','Scr. Fail','Enrolled','Ongoing','Drop-out','Completed'];
+  const enrKeys = ['enrTarget','enrScreened','enrFail','enrEnrolled','enrOngoing','enrDropout','enrCompleted'];
+  const enrHtml = enrKeys.map((k,i) => `<div class="enr-cell-r"><div class="enr-lbl-r">${enrLabels[i]}</div><div class="enr-val-r">${d[k]||'0'}</div></div>`).join('');
+
+  // Checklist
+  let lastSec = '';
+  const chkHtml = d.checklist.map(item => {
+    let secHtml = '';
+    if (item.section !== lastSec) { lastSec = item.section; secHtml = `<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:10px 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px">${item.section}</div>`; }
+    const caClass = item.val === '예' ? 'yes' : item.val === '아니오' ? 'no' : 'na';
+    return secHtml + `
+      <div class="chk-row">
+        <span class="cq"><span style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-right:6px">${item.code}</span>${item.q}</span>
+        <span class="ca ${caClass}">${item.val}</span>
+      </div>
+      ${item.cmt ? `<div class="cmt-block">${item.cmt}</div>` : ''}`;
+  }).join('');
+
+  // Issues
+  const issueHtml = issues.length > 0 ? `
+    <div class="r-sec">
+      <div class="r-sec-title">⚠ 이슈 항목 (아니오)</div>
+      ${issues.map(i => `
+        <div style="padding:6px 0;border-bottom:1px solid var(--border)">
+          <div class="issue-tag">⚑ ${i.code}</div>
+          <div style="font-size:12px;color:var(--text);margin:3px 0">${i.q}</div>
+          ${i.cmt ? `<div class="cmt-block">${i.cmt}</div>` : ''}
+        </div>`).join('')}
+    </div>` : '';
+
+  // ICF table
+  const icfHtml = d.icfList.length > 0 ? `
+    <div class="r-sec">
+      <div class="r-sec-title">I. ICF Summary</div>
+      <table class="r-table">
+        <thead><tr><th>#</th><th>Subject No.</th><th>서명일</th><th>ICF Type / Version</th><th>Remarks</th></tr></thead>
+        <tbody>${d.icfList.map((r,i) => `<tr><td>${i+1}</td><td>${r.subj||'-'}</td><td>${fmtDate(r.date)}</td><td>${r.version||'-'}</td><td>${r.remarks||'-'}</td></tr>`).join('')}</tbody>
+      </table>
+      ${d.icfComment ? `<div class="cmt-block" style="margin-top:8px">${d.icfComment}</div>` : ''}
+    </div>` : '';
+
+  // SAE table
+  const saeHtml = d.saeList.length > 0 ? `
+    <div class="r-sec">
+      <div class="r-sec-title">II. SAE Summary</div>
+      <table class="r-table">
+        <thead><tr><th>Subject</th><th>SAE Name</th><th>Start</th><th>Awareness</th><th>IRB 보고</th><th>Sponsor 보고</th><th>Status</th></tr></thead>
+        <tbody>${d.saeList.map(r => `<tr><td>${r.subj||'-'}</td><td>${r.name||'-'}</td><td>${fmtDate(r.start)}</td><td>${fmtDate(r.aware)}</td><td>${fmtDate(r.irb)}</td><td>${fmtDate(r.sponsor)}</td><td>${r.status||'-'}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>` : '';
+
+  // SDV table
+  const sdvHtml = d.sdvList.length > 0 ? `
+    <div class="r-sec">
+      <div class="r-sec-title">IV. SDV Summary <span style="font-size:10px;font-weight:400;color:var(--text3)">*A=Full SDV, B=CRF only, C=Others</span></div>
+      <table class="r-table">
+        <thead><tr><th>#</th><th>Subject</th><th>Visit</th><th>Type</th><th>Comment</th></tr></thead>
+        <tbody>${d.sdvList.map((r,i) => `<tr><td>${i+1}</td><td>${r.subj||'-'}</td><td>${r.visit||'-'}</td><td>${r.type||'A'}</td><td>${r.comment||'-'}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>` : '';
+
+  // IP table
+  const ipHtml = d.ipList.length > 0 ? `
+    <div class="r-sec">
+      <div class="r-sec-title">IP 재고 현황 <span style="font-size:10px;font-weight:400;color:var(--text3)">[${fmtDate(d.visitDate)} 기준]</span></div>
+      <table class="r-table">
+        <thead><tr><th>IP명</th><th>용량</th><th>유효기간</th><th>Lot No.</th><th>재고</th><th>비고</th></tr></thead>
+        <tbody>${d.ipList.map(r => {
+          let note = '', cls = '';
+          if (r.exp) {
+            const days = Math.ceil((new Date(r.exp) - today)/(1000*60*60*24));
+            if (days < 0) { note = '⚠ 만료'; cls = 'exp-warn'; }
+            else if (days < 90) { note = `⚠ ${days}일 남음`; cls = 'exp-caution'; }
+            else { note = '정상'; cls = 'exp-ok'; }
+          }
+          return `<tr><td>${r.name||'-'}</td><td>${r.dose||'-'}</td><td>${fmtDate(r.exp)}</td><td>${r.lot||'-'}</td><td>${r.stock||'-'}</td><td class="${cls}">${note}</td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>` : '';
+
+  // FU table
+  const fuTblHeader = `<thead><tr><th>#</th><th>Category</th><th>Date</th><th>Status</th><th>Description</th><th>Action / Follow-up</th></tr></thead>`;
+  const fuOldHtml = d.fuOld.length > 0 ? `
+    <div style="font-size:11px;color:var(--text2);margin-bottom:5px">▸ Old Items (이전 방문 이월)</div>
+    <table class="r-table">
+      ${fuTblHeader}
+      <tbody>${d.fuOld.map((r,i) => {
+        const sc = r.status === 'Resolved' ? 'status-resolved' : r.status === 'Ongoing' ? 'status-ongoing' : '';
+        return `<tr><td>${i+1}</td><td>${r.cat||'-'}</td><td>${fmtDate(r.date)}</td><td class="${sc}">${r.status||'N/A'}</td><td>${r.desc||'-'}</td><td>${r.action||'-'}</td></tr>`;
+      }).join('')}</tbody>
+    </table>` : '';
+  const fuNewHtml = d.fuNew.length > 0 ? `
+    <div style="font-size:11px;color:var(--text2);margin:12px 0 5px">▸ New Items (이번 방문 신규)</div>
+    <table class="r-table">
+      ${fuTblHeader}
+      <tbody>${d.fuNew.map((r,i) => `<tr><td>${i+1}</td><td>${r.cat||'-'}</td><td>${fmtDate(r.date)}</td><td style="color:var(--text3)">N/A</td><td>${r.desc||'-'}</td><td>${r.action||'-'}</td></tr>`).join('')}</tbody>
+    </table>` : '';
+  const fuHtml = (fuOldHtml || fuNewHtml) ? `
+    <div class="r-sec">
+      <div class="r-sec-title">V. Follow-up Items</div>
+      ${fuOldHtml}${fuNewHtml}
+    </div>` : '';
+
+  document.getElementById('reportOutput').innerHTML = `
+    <div class="report-doc">
+      <div class="r-head">
+        <div class="r-title">Monitoring Visit Report</div>
+        <div class="r-sub">IMV #${d.visitNum||'-'}  ·  ${fmtDate(d.visitDate)}  ·  ${d.siteName||'-'}</div>
+      </div>
+
+      <div class="r-sec">
+        <div class="r-sec-title">Ⅰ. Study & Site Information</div>
+        <div class="r-kv-grid">
+          <div class="r-kv"><div class="r-klbl">Sponsor</div><div class="r-kval">${d.sponsor||'—'}</div></div>
+          <div class="r-kv"><div class="r-klbl">Site No.</div><div class="r-kval">${d.siteNo||'—'}</div></div>
+          <div class="r-kv"><div class="r-klbl">기관명</div><div class="r-kval">${d.siteName||'—'}</div></div>
+          <div class="r-kv"><div class="r-klbl">PI</div><div class="r-kval">${d.pi||'—'}</div></div>
+          <div class="r-kv"><div class="r-klbl">CRC</div><div class="r-kval">${d.crc||'—'}</div></div>
+          <div class="r-kv"><div class="r-klbl">관리약사</div><div class="r-kval">${d.pharmacist||'—'}</div></div>
+        </div>
+      </div>
+
+      <div class="r-sec">
+        <div class="r-sec-title">Ⅱ. Visit Information</div>
+        <div class="r-kv-grid">
+          <div class="r-kv"><div class="r-klbl">방문 유형</div><div class="r-kval">${d.visitType} Visit (#${d.visitNum||'-'})</div></div>
+          <div class="r-kv"><div class="r-klbl">방문일</div><div class="r-kval">${fmtDate(d.visitDate)}</div></div>
+          <div class="r-kv"><div class="r-klbl">이전 방문</div><div class="r-kval">${fmtDate(d.lastVisitDate)} (${d.lastVisitType||'-'})</div></div>
+          <div class="r-kv"><div class="r-klbl">Contact</div><div class="r-kval">PI: ${d.pi||'-'} / CRC: ${d.crc||'-'}</div></div>
+        </div>
+      </div>
+
+      <div class="r-sec">
+        <div class="r-sec-title">Part 1. Enrollment Status</div>
+        <div class="enr-grid-r">${enrHtml}</div>
+        ${d.enrComment ? `<div class="cmt-block">${d.enrComment}</div>` : ''}
+      </div>
+
+      ${issueHtml}
+
+      <div class="r-sec">
+        <div class="r-sec-title">Part 2. Monitoring Checklist</div>
+        ${chkHtml}
+      </div>
+
+      ${icfHtml}
+      ${saeHtml}
+      ${sdvHtml}
+      ${ipHtml}
+      ${fuHtml}
+
+      <div class="r-sec" style="margin-top:28px">
+        <div class="r-sec-title">VI. Signatures</div>
+        <table class="r-table">
+          <thead><tr><th>Role</th><th>Name</th><th>Signature</th><th>Date</th></tr></thead>
+          <tbody>
+            <tr><td>Prepared by (CRA)</td><td style="min-width:120px"></td><td style="min-width:120px"></td><td style="min-width:100px"></td></tr>
+            <tr><td>Reviewed by</td><td></td><td></td><td></td></tr>
+            <tr><td>Approved by</td><td></td><td></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:20px;text-align:right;font-size:10px;color:var(--text3);font-family:var(--mono)">
+        Generated by CRA Smart Monitor · ${new Date().toLocaleString('ko-KR')}
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// ============================================================
+// DOCX DOWNLOAD (browser-native using docx iife)
+// ============================================================
+async function downloadDocx() {
+  const btn = document.getElementById('docxBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>생성 중...';
+
+  const data = collectData();
+
+  try {
+    // Load docx library dynamically if not loaded
+    if (typeof docx === 'undefined') {
+      await loadScript('https://unpkg.com/docx@9.0.2/dist/docx.umd.min.js');
+    }
+    buildAndDownloadDocx(data, btn);
+  } catch(e) {
+    // Final fallback: RTF
+    buildRTFAndDownload(data, btn);
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function buildAndDownloadDocx(data, btn) {
+  try {
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+      AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign,
+      HeadingLevel, PageNumber, Header, Footer } = docx;
+
+    const fmtD = (s) => {
+      if (!s) return '-';
+      const d = new Date(s); if (isNaN(d)) return s;
+      const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${String(d.getDate()).padStart(2,'0')}${m[d.getMonth()]}${d.getFullYear()}`;
+    };
+
+    const borderThin = { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' };
+    const allThin = { top:borderThin, bottom:borderThin, left:borderThin, right:borderThin };
+
+    const hCell = (text, w) => new TableCell({
+      borders: allThin, width:{size:w,type:WidthType.DXA},
+      shading:{fill:'2E6FD8',type:ShadingType.CLEAR},
+      margins:{top:60,bottom:60,left:80,right:80},
+      children:[new Paragraph({children:[new TextRun({text,bold:true,size:18,color:'FFFFFF',font:'Malgun Gothic'})]})]
+    });
+    const dCell = (text, w, opts={}) => new TableCell({
+      borders: allThin, width:{size:w,type:WidthType.DXA},
+      shading:{fill:opts.fill||'FFFFFF',type:ShadingType.CLEAR},
+      margins:{top:60,bottom:60,left:80,right:80}, verticalAlign:VerticalAlign.TOP,
+      children:[new Paragraph({children:[new TextRun({text:String(text||'-'),size:18,font:'Malgun Gothic',color:opts.color||'333333',bold:opts.bold||false})]})]
+    });
+    const secTitle = (t) => new Paragraph({
+      children:[new TextRun({text:t,bold:true,size:22,color:'2E6FD8',font:'Malgun Gothic'})],
+      spacing:{before:280,after:100},
+      border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'2E6FD8',space:2}}
+    });
+    const kvRow = (l,v) => new Paragraph({
+      children:[new TextRun({text:l+'  ',size:16,color:'888888',font:'Malgun Gothic'}),
+                new TextRun({text:String(v||'-'),size:20,font:'Malgun Gothic',color:'111111'})],
+      spacing:{after:60}
+    });
+
+    const ch = [];
+
+    // Title
+    ch.push(new Paragraph({children:[new TextRun({text:'Monitoring Visit Report',bold:true,size:40,color:'2E6FD8',font:'Malgun Gothic'})],spacing:{after:80}}));
+    ch.push(new Paragraph({children:[new TextRun({text:`IMV #${data.visitNum||'-'}  ·  ${fmtD(data.visitDate)}  ·  ${data.siteName||'-'}`,size:20,color:'888888',font:'Malgun Gothic'})],spacing:{after:320}}));
+
+    // Study & Site
+    ch.push(secTitle('Ⅰ. Study & Site Information'));
+    const studyT = new Table({ width:{size:9026,type:WidthType.DXA}, columnWidths:[1500,3013,1500,3013], rows:[
+      new TableRow({children:[dCell('Sponsor',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(data.sponsor,3013),dCell('Site No.',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(data.siteNo,3013)]}),
+      new TableRow({children:[dCell('기관명',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(data.siteName,3013),dCell('PI',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(data.pi,3013)]}),
+      new TableRow({children:[dCell('CRC',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(data.crc,3013),dCell('관리약사',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(data.pharmacist,3013)]}),
+    ]});
+    ch.push(studyT); ch.push(new Paragraph({spacing:{after:160}}));
+
+    // Visit
+    ch.push(secTitle('Ⅱ. Visit Information'));
+    const visitT = new Table({ width:{size:9026,type:WidthType.DXA}, columnWidths:[1500,3013,1500,3013], rows:[
+      new TableRow({children:[dCell('방문 유형',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(`${data.visitType||'On-Site'} Visit (#${data.visitNum||'-'})`,3013),dCell('방문일',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(fmtD(data.visitDate),3013)]}),
+      new TableRow({children:[dCell('이전 방문일',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(`${fmtD(data.lastVisitDate)} (${data.lastVisitType||'-'})`,3013),dCell('Contact',1500,{fill:'F5F8FF',bold:true,color:'555555'}),dCell(`PI: ${data.pi||'-'} / CRC: ${data.crc||'-'}`,3013)]}),
+    ]});
+    ch.push(visitT); ch.push(new Paragraph({spacing:{after:160}}));
+
+    // Enrollment
+    ch.push(secTitle('Part 1. Enrollment Status'));
+    const enrL=['Target','Screened','Scr.Fail','Enrolled','Ongoing','Drop-out','Completed'];
+    const enrK=['enrTarget','enrScreened','enrFail','enrEnrolled','enrOngoing','enrDropout','enrCompleted'];
+    const enrW=[1289,1289,1289,1289,1289,1289,1292];
+    const enrT = new Table({ width:{size:9026,type:WidthType.DXA}, columnWidths:enrW, rows:[
+      new TableRow({children:enrL.map((l,i)=>hCell(l,enrW[i]))}),
+      new TableRow({children:enrK.map((k,i)=>new TableCell({borders:allThin,width:{size:enrW[i],type:WidthType.DXA},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:String(data[k]||'0'),bold:true,size:26,font:'Malgun Gothic',color:'2E6FD8'})]})]}))})
+    ]});
+    ch.push(enrT);
+    if(data.enrComment) ch.push(new Paragraph({children:[new TextRun({text:`Comments: ${data.enrComment}`,size:18,font:'Malgun Gothic',color:'555555',italics:true})],spacing:{before:80,after:80}}));
+    ch.push(new Paragraph({spacing:{after:160}}));
+
+    // Issues
+    const issues = (data.checklist||[]).filter(c=>c.val==='아니오');
+    if(issues.length>0){
+      ch.push(secTitle('⚠ 이슈 항목 (아니오)'));
+      issues.forEach(item=>{
+        ch.push(new Paragraph({children:[new TextRun({text:`[${item.code}]  `,bold:true,size:18,font:'Malgun Gothic',color:'D9534F'}),new TextRun({text:item.q,size:18,font:'Malgun Gothic'})],spacing:{before:60,after:40}}));
+        if(item.cmt) ch.push(new Paragraph({children:[new TextRun({text:`  → ${item.cmt}`,size:18,font:'Malgun Gothic',color:'555555',italics:true})],spacing:{after:60}}));
+      });
+      ch.push(new Paragraph({spacing:{after:120}}));
+    }
+
+    // Checklist
+    ch.push(secTitle('Part 2. Monitoring Checklist'));
+    let lastSec='';
+    (data.checklist||[]).forEach(item=>{
+      if(item.section!==lastSec){ lastSec=item.section; ch.push(new Paragraph({children:[new TextRun({text:item.section,bold:true,size:18,color:'444444',font:'Malgun Gothic'})],spacing:{before:120,after:60}})); }
+      const vc=item.val==='예'?'27AE60':item.val==='아니오'?'D9534F':'999999';
+      ch.push(new Paragraph({children:[new TextRun({text:`${item.code}  `,size:18,font:'Malgun Gothic',color:'888888'}),new TextRun({text:item.q,size:18,font:'Malgun Gothic',color:'333333'}),new TextRun({text:`   [${item.val}]`,bold:true,size:18,font:'Malgun Gothic',color:vc})],spacing:{after:40}}));
+      if(item.cmt) ch.push(new Paragraph({children:[new TextRun({text:`     Comments: ${item.cmt}`,size:17,font:'Malgun Gothic',color:'666666',italics:true})],spacing:{after:60}}));
+    });
+    ch.push(new Paragraph({spacing:{after:160}}));
+
+    // ICF
+    if((data.icfList||[]).length>0){
+      ch.push(secTitle('I. ICF Summary'));
+      const icfW=[500,1200,1800,2400,3126];
+      ch.push(new Table({width:{size:9026,type:WidthType.DXA},columnWidths:icfW,rows:[
+        new TableRow({children:['#','Subject No.','서명일','ICF Type / Version','Remarks'].map((h,i)=>hCell(h,icfW[i]))}),
+        ...data.icfList.map((r,idx)=>new TableRow({children:[dCell(String(idx+1),500,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.subj,1200,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(fmtD(r.date),1800,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.version,2400,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.remarks,3126,{fill:idx%2===0?'FAFAFA':'FFFFFF'})]}))
+      ]}));
+      if(data.icfComment) ch.push(new Paragraph({children:[new TextRun({text:`Comments: ${data.icfComment}`,size:18,font:'Malgun Gothic',color:'555555',italics:true})],spacing:{before:80}}));
+      ch.push(new Paragraph({spacing:{after:160}}));
+    }
+
+    // SAE
+    if((data.saeList||[]).length>0){
+      ch.push(secTitle('II. SAE Summary'));
+      const saeW=[800,1400,900,900,1100,1100,1826];
+      ch.push(new Table({width:{size:9026,type:WidthType.DXA},columnWidths:saeW,rows:[
+        new TableRow({children:['Subject','SAE Name','Start','Awareness','IRB 보고','Sponsor 보고','Status'].map((h,i)=>hCell(h,saeW[i]))}),
+        ...data.saeList.map((r,idx)=>new TableRow({children:[dCell(r.subj,800,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.name,1400,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(fmtD(r.start),900,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(fmtD(r.aware),900,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(fmtD(r.irb),1100,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(fmtD(r.sponsor),1100,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.status,1826,{fill:idx%2===0?'FAFAFA':'FFFFFF'})]}))
+      ]}));
+      ch.push(new Paragraph({spacing:{after:160}}));
+    }
+
+    // SDV
+    if((data.sdvList||[]).length>0){
+      ch.push(secTitle('IV. SDV Summary'));
+      ch.push(new Paragraph({children:[new TextRun({text:'*Review Type: A(Full SDV), B(CRF only), C(Others)',size:16,font:'Malgun Gothic',color:'888888',italics:true})],spacing:{after:80}}));
+      const sdvW=[600,1200,1200,1000,5026];
+      ch.push(new Table({width:{size:9026,type:WidthType.DXA},columnWidths:sdvW,rows:[
+        new TableRow({children:['#','Subject','Visit','Type','Comment'].map((h,i)=>hCell(h,sdvW[i]))}),
+        ...data.sdvList.map((r,idx)=>new TableRow({children:[dCell(String(idx+1),600,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.subj,1200,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.visit,1200,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.type,1000,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.comment,5026,{fill:idx%2===0?'FAFAFA':'FFFFFF'})]}))
+      ]}));
+      ch.push(new Paragraph({spacing:{after:160}}));
+    }
+
+    // IP
+    if((data.ipList||[]).length>0){
+      ch.push(secTitle('IP 재고 현황'));
+      ch.push(new Paragraph({children:[new TextRun({text:`기준일: ${fmtD(data.visitDate)}`,size:16,font:'Malgun Gothic',color:'888888'})],spacing:{after:80}}));
+      const ipW=[2200,900,1600,1500,1000,1826]; const today=new Date();
+      ch.push(new Table({width:{size:9026,type:WidthType.DXA},columnWidths:ipW,rows:[
+        new TableRow({children:['IP명','용량','유효기간','Lot No.','재고','비고'].map((h,i)=>hCell(h,ipW[i]))}),
+        ...data.ipList.map((r,idx)=>{
+          let note='',ec='333333';
+          if(r.exp){const days=Math.ceil((new Date(r.exp)-today)/(864e5));if(days<0){note='⚠ 만료';ec='D9534F';}else if(days<90){note=`⚠ ${days}일 남음`;ec='E67E22';}else{note='정상';ec='27AE60';}}
+          return new TableRow({children:[dCell(r.name,2200,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.dose,900,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(fmtD(r.exp),1600,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.lot,1500,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.stock,1000,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(note,1826,{fill:idx%2===0?'FAFAFA':'FFFFFF',color:ec,bold:ec!=='333333'})]});
+        })
+      ]}));
+      ch.push(new Paragraph({spacing:{after:160}}));
+    }
+
+    // Follow-up
+    if((data.fuOld||[]).length>0||(data.fuNew||[]).length>0){
+      ch.push(secTitle('V. Follow-up Items'));
+      const fuW=[400,700,1100,800,3026,2000];
+      const fuHdr = () => new TableRow({children:['#','Category','Date','Status','Description','Action / Follow-up'].map((h,i)=>hCell(h,fuW[i]))});
+      if((data.fuOld||[]).length>0){
+        ch.push(new Paragraph({children:[new TextRun({text:'▸ Old Items',bold:true,size:18,font:'Malgun Gothic',color:'444444'})],spacing:{before:80,after:60}}));
+        ch.push(new Table({width:{size:9026,type:WidthType.DXA},columnWidths:fuW,rows:[fuHdr(),...data.fuOld.map((r,idx)=>{const sc=r.status==='Resolved'?'27AE60':r.status==='Ongoing'?'E67E22':'999999';return new TableRow({children:[dCell(String(idx+1),400,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.cat,700,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(fmtD(r.date),1100,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.status||'N/A',800,{fill:idx%2===0?'FAFAFA':'FFFFFF',color:sc,bold:true}),dCell(r.desc,3026,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.action,2000,{fill:idx%2===0?'FAFAFA':'FFFFFF'})]})})]}) );
+      }
+      if((data.fuNew||[]).length>0){
+        ch.push(new Paragraph({children:[new TextRun({text:'▸ New Items',bold:true,size:18,font:'Malgun Gothic',color:'444444'})],spacing:{before:120,after:60}}));
+        ch.push(new Table({width:{size:9026,type:WidthType.DXA},columnWidths:fuW,rows:[fuHdr(),...data.fuNew.map((r,idx)=>new TableRow({children:[dCell(String(idx+1),400,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.cat,700,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(fmtD(r.date),1100,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell('N/A',800,{fill:idx%2===0?'FAFAFA':'FFFFFF',color:'999999'}),dCell(r.desc,3026,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell(r.action,2000,{fill:idx%2===0?'FAFAFA':'FFFFFF'})]}))]}));
+      }
+      ch.push(new Paragraph({spacing:{after:160}}));
+    }
+
+    // Signatures
+    ch.push(secTitle('VI. Signatures'));
+    const sigW=[2256,2256,2257,2257];
+    ch.push(new Table({width:{size:9026,type:WidthType.DXA},columnWidths:sigW,rows:[
+      new TableRow({children:['Role','Name','Signature','Date'].map((h,i)=>hCell(h,sigW[i]))}),
+      ...['Prepared by (CRA)','Reviewed by','Approved by'].map((role,idx)=>new TableRow({children:[dCell(role,2256,{fill:idx%2===0?'FAFAFA':'FFFFFF',bold:true,color:'555555'}),dCell('',2256,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell('',2257,{fill:idx%2===0?'FAFAFA':'FFFFFF'}),dCell('',2257,{fill:idx%2===0?'FAFAFA':'FFFFFF'})]}))
+    ]}));
+    ch.push(new Paragraph({spacing:{before:320}}));
+    ch.push(new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:`Generated by CRA Smart Monitor  ·  ${new Date().toLocaleString('ko-KR')}`,size:14,font:'Malgun Gothic',color:'BBBBBB'})]}));
+
+    const doc = new Document({
+      sections:[{
+        properties:{page:{size:{width:11906,height:16838},margin:{top:1080,right:1080,bottom:1080,left:1080}}},
+        headers:{default:new Header({children:[new Paragraph({children:[new TextRun({text:`Monitoring Visit Report  ·  IMV #${data.visitNum||'-'}  ·  ${data.siteName||'-'}`,size:18,font:'Malgun Gothic',color:'888888'})],border:{bottom:{style:BorderStyle.SINGLE,size:4,color:'DDDDDD',space:1}}})]})}  ,
+        footers:{default:new Footer({children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({children:[PageNumber.CURRENT],size:16,font:'Malgun Gothic',color:'888888'}),new TextRun({text:' / ',size:16,font:'Malgun Gothic',color:'888888'}),new TextRun({children:[PageNumber.TOTAL_PAGES],size:16,font:'Malgun Gothic',color:'888888'})],border:{top:{style:BorderStyle.SINGLE,size:4,color:'DDDDDD',space:1}}})]})}  ,
+        children:ch
+      }]
+    });
+
+    Packer.toBlob(doc).then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ds = data.visitDate || new Date().toISOString().split('T')[0];
+      a.href = url;
+      a.download = `MVR_IMV${data.visitNum||'_'}_${(data.siteName||'Site').replace(/\s/g,'_')}_${ds}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      btn.disabled = false;
+      btn.innerHTML = '⬇ .docx';
+    });
+
+  } catch(err) {
+    console.error('docx 생성 오류:', err);
+    buildRTFAndDownload(data, btn);
+  }
+}
+
+function buildRTFAndDownload(data, btn) {
+  const fmtD = (s) => {
+    if (!s) return '-';
+    const d = new Date(s); if (isNaN(d)) return s;
+    const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${String(d.getDate()).padStart(2,'0')}${m[d.getMonth()]}${d.getFullYear()}`;
+  };
+  let content = `Monitoring Visit Report\nIMV #${data.visitNum||'-'} · ${fmtD(data.visitDate)} · ${data.siteName||'-'}\n\n`;
+  content += `[Study & Site]\nSponsor: ${data.sponsor||'-'}  |  Site No.: ${data.siteNo||'-'}\n기관명: ${data.siteName||'-'}  |  PI: ${data.pi||'-'}  |  CRC: ${data.crc||'-'}\n\n`;
+  content += `[Visit]\n방문일: ${fmtD(data.visitDate)} (IMV #${data.visitNum||'-'}) | 이전방문: ${fmtD(data.lastVisitDate)} (${data.lastVisitType||'-'})\n\n`;
+  content += `[Enrollment]\nTarget:${data.enrTarget||0} Screened:${data.enrScreened||0} Fail:${data.enrFail||0} Enrolled:${data.enrEnrolled||0} Ongoing:${data.enrOngoing||0} Dropout:${data.enrDropout||0} Completed:${data.enrCompleted||0}\n\n`;
+  content += `[Checklist]\n`;
+  (data.checklist||[]).forEach(c=>{ content+=`${c.code}: ${c.q} [${c.val}]${c.cmt?'\n  → '+c.cmt:''}\n`; });
+  const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `MVR_${data.visitDate||'draft'}.txt`; a.click();
+  URL.revokeObjectURL(url);
+  btn.disabled = false;
+  btn.innerHTML = '⬇ .docx';
+}
+// COPY
+// ============================================================
+function copyReport() {
+  const text = document.getElementById('reportOutput').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✓ 복사됨';
+    setTimeout(() => { btn.textContent = '📋 텍스트 복사'; }, 2000);
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+buildChecklist();
+document.getElementById('visitDate').value = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
