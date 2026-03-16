@@ -1840,18 +1840,22 @@ function fillSOPXml(xml, data) {
 
   // ── Visit ──
   const visitNum = data.visitNum || '';
-  // visitNum 삽입 - 여러 방식 시도
+  // visitNum 삽입
   const vnEscaped = escXml(visitNum);
-  // 방법1: 단순 run 내 텍스트 교체
-  if (xml.includes('On-Site Visit (#</w:t>')) {
-    xml = xml.replace('On-Site Visit (#</w:t>', 'On-Site Visit (# ' + vnEscaped + '</w:t>');
-  } else {
-    // 방법2: permStart 기반 - 'On-Site Visit (#' 다음 빈 run에 삽입
-    xml = xml.replace(
-      /(<w:t[^>]*>On-Site Visit \(#\s*<\/w:t>)(<\/w:r>)(<w:permStart[^\/]*\/>)(<w:r[^>]*>)(<w:rPr>.*?<\/w:rPr>)(<w:t[^>]*>)(\s*)(<\/w:t>)/s,
-      (m, t1, r1, perm, r2, rpr, t2open, space, t2close) =>
-        t1 + r1 + perm + r2 + rpr + t2open + vnEscaped + t2close
-    );
+  if (visitNum) {
+    // 방법1: '#</w:t>' 패턴 - 빈 칸에 삽입 (기본 양식)
+    if (xml.includes('On-Site Visit (#</w:t>')) {
+      xml = xml.replace('On-Site Visit (#</w:t>',
+        'On-Site Visit (# ' + vnEscaped + '</w:t>');
+    } else {
+      // 방법2: '#숫자' 패턴 - permStart 다음 run의 기존 값을 visitNum으로 교체
+      // 'On-Site Visit (#</w:t></w:r><permStart...><w:r...><w:t>기존숫자</w:t>' 구조
+      const visitNumRe = /On-Site Visit \(#<\/w:t><\/w:r>((?:<w:permStart[^>]*\/>)+)(<w:r[^>]*>)(<w:rPr>[\s\S]*?<\/w:rPr>)(<w:t[^>]*>)[^<]*(<\/w:t>)/;
+      if (visitNumRe.test(xml)) {
+        xml = xml.replace(visitNumRe,
+          'On-Site Visit (#</w:t></w:r>$1$2$3$4' + vnEscaped + '$5');
+      }
+    }
   }
   cells = getCells();
 
@@ -2480,23 +2484,34 @@ async function parsePrevMVR(input) {
       }
 
       // Enrollment 파싱
-      // SOP 양식 셀명과 동일하게 맞춤
       const enrLabels = ['Target','Screened','Screening Failure','Enrolled','On-going','Drop-out','Completed'];
       const enrKeys   = ['enrTarget','enrScreened','enrFail','enrEnrolled','enrOngoing','enrDropout','enrCompleted'];
-      // 미리보기용 레이블도 추가 시도 (화순 MVR 등 약식 표기 대응)
       const enrLabelsAlt = ['Target','Screened','Scr. Fail','Enrolled','On-going','Drop-out','Completed'];
-      enrLabels.forEach((lbl, i) => {
-        let idx = cellTexts.indexOf(lbl);
-        // 약식 레이블도 시도 (Scr. Fail 등)
-        if (idx < 0) idx = cellTexts.indexOf(enrLabelsAlt[i]);
-        if (idx > -1) {
-          const val = cellTexts[idx+1] || '0';
-          // 숫자가 아닌 값(헤더 텍스트)은 무시
-          if (/^\d+$/.test(val.trim()) || val.trim() === '0') {
-            basicInfo.enrollment[enrKeys[i]] = val.trim();
-          }
+      // 방법1: Target 셀 찾고 바로 다음 셀이 숫자이면 개별 매칭
+      // 방법2: 헤더 7개가 연속으로 있고 다음 7개가 값인 경우 (표 구조)
+      const targetIdx = cellTexts.indexOf('Target');
+      if (targetIdx > -1) {
+        // 헤더 7개가 연속인지 확인
+        const headerSeq = ['Target','Screened','Screening Failure','Enrolled','On-going','Drop-out','Completed'];
+        const isSeq = headerSeq.every((h, i) => cellTexts[targetIdx + i] === h);
+        if (isSeq) {
+          // 헤더 7개 바로 다음 7개 셀이 값
+          enrKeys.forEach((k, i) => {
+            const val = cellTexts[targetIdx + 7 + i] || '0';
+            if (/^\d+$/.test(val.trim())) basicInfo.enrollment[k] = val.trim();
+          });
+        } else {
+          // 개별 레이블 매칭 방식
+          enrLabels.forEach((lbl, i) => {
+            let idx = cellTexts.indexOf(lbl);
+            if (idx < 0) idx = cellTexts.indexOf(enrLabelsAlt[i]);
+            if (idx > -1) {
+              const val = cellTexts[idx+1] || '0';
+              if (/^\d+$/.test(val.trim())) basicInfo.enrollment[enrKeys[i]] = val.trim();
+            }
+          });
         }
-      });
+      }
 
       // F/U 파싱
       const oldIdx = cellTexts.findIndex(t => t === 'Old');
