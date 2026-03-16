@@ -374,6 +374,15 @@
   }
 
 
+  /* 이전 MVR 업로드 바 */
+  .prev-mvr-upload-bar{background:linear-gradient(135deg,rgba(79,142,247,.12),rgba(79,142,247,.05));border:1px solid rgba(79,142,247,.3);border-radius:12px;padding:16px 20px;margin-bottom:16px}
+  .prev-mvr-title{font-family:var(--head);font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px}
+  .prev-mvr-desc{font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5}
+  .prev-mvr-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .prev-mvr-btn{padding:9px 18px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:var(--head);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+  .prev-mvr-btn:hover{background:#3a7de8;transform:translateY(-1px);box-shadow:0 4px 16px rgba(79,142,247,.3)}
+  .prev-mvr-filenames{font-size:11px;color:var(--accent);font-style:italic;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
   .sop-btn {
     flex: 1;
     padding: 11px;
@@ -452,6 +461,18 @@
 <div class="main">
 <!-- ========== FORM ========== -->
 <div class="form-panel">
+
+  <!-- 이전 MVR 업로드 섹션 -->
+  <div class="prev-mvr-upload-bar">
+    <div class="prev-mvr-title">📂 이전 MVR 불러오기</div>
+    <div class="prev-mvr-desc">이전 방문 MVR을 업로드하면 기본정보, F/U 항목, Enrollment 등이 자동으로 채워집니다.</div>
+    <div class="prev-mvr-actions">
+      <button class="prev-mvr-btn" onclick="document.getElementById('fuFileInput').click()">
+        📎 이전 MVR 업로드 (.docx / .pdf)
+      </button>
+      <span id="prevMvrFileNames" class="prev-mvr-filenames"></span>
+    </div>
+  </div>
 
   <!-- STUDY INFO -->
   <div class="card" id="card-study">
@@ -602,8 +623,7 @@
   <div class="card" id="card-fu">
     <div class="card-header" onclick="toggleCard('fu')">
       <span class="card-num">F/U</span><span class="card-title">Follow-up Items</span>
-      <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('fuFileInput').click()" title="이전 MVR docx 업로드 → Old F/U + 기본정보 자동 이월">📎 이전 MVR</button>
-      <input type="file" id="fuFileInput" accept=".docx,.pdf" style="display:none" onchange="parsePrevMVR(this)">
+      <input type="file" id="fuFileInput" accept=".docx,.pdf" multiple style="display:none" onchange="parsePrevMVR(this)">
       <span class="card-toggle open" id="tog-fu">▼</span>
     </div>
     <div class="card-body">
@@ -2620,6 +2640,15 @@ Resolved F/U는 제외. JSON만 출력.`;
     if (basicInfo && basicInfo.siteName) msgs.push('기본정보 자동입력');
     if (fuItems.length > 0) msgs.push(`F/U ${fuItems.length}건 이월`);
     showToast('✅ ' + (msgs.join(' + ') || '완료'));
+
+    // 파일명 표시 업데이트
+    const nameEl = document.getElementById('prevMvrFileNames');
+    if (nameEl) {
+      const existing = nameEl.textContent ? nameEl.textContent.split(', ').filter(Boolean) : [];
+      const newName = file.name.replace(/\.docx$|\.pdf$/i, '');
+      if (!existing.includes(newName)) existing.push(newName);
+      nameEl.textContent = existing.join(', ');
+    }
 
   } catch (err) {
     hideParseOverlay();
