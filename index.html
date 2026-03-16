@@ -3261,83 +3261,182 @@ document.addEventListener('DOMContentLoaded', renderSiteProfiles);
 // F/U Letter 생성 (AI 기반)
 // ============================================================
 async function generateFULetter() {
-  const apiKey = localStorage.getItem('cra_api_key') || '';
-  const proxyUrl = localStorage.getItem('cra_proxy_url') || '';
-  if (!apiKey) { openSettings(); showToast('API 키를 먼저 설정해주세요'); return; }
+  // docxjs CDN 로드
+  if (!window.docx) {
+    showParseOverlay('F/U Letter 준비 중...', 'docx 라이브러리 로딩');
+    await loadScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js');
+    await new Promise(r => setTimeout(r, 500));
+  }
 
   const data = collectAllData();
-  const SEP = '\n';
-  const enrKeys = ['enrTarget','enrScreened','enrFail','enrEnrolled','enrOngoing','enrDropout','enrCompleted'];
-  const enrLabels = ['Target','Screened','S/F','Enrolled','On-going','Drop-out','Completed'];
-  const enrRow = enrKeys.map(function(k){ return data[k]||'-'; }).join(' | ');
+  if (!data.siteName) { showToast('⚠️ 기관명을 먼저 입력하세요'); return; }
 
-  const allFU = (data.fuOld||[]).filter(function(f){ return f.status!=='Resolved'; }).concat(data.fuNew||[]);
-  const icfItems    = allFU.filter(function(f){ return f.cat==='ICF'; });
-  const saeItems    = data.saeList || [];
-  const pdItems     = allFU.filter(function(f){ return f.cat==='Protocol Deviation'; });
-  const otherItems  = allFU.filter(function(f){ return !['ICF','SAE','Protocol Deviation'].includes(f.cat); });
-
-  const visitDateKr = (function(){
-    const d = data.visitDate; if (!d) return '';
-    const dt = new Date(d);
-    return dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월 '+dt.getDate()+'일';
-  })();
-
-  function descList(arr) {
-    return arr.length > 0 ? arr.map(function(f){ return '- '+f.desc; }).join(SEP) : '- 해당 없음';
-  }
-  function saeList(arr) {
-    return arr.length > 0
-      ? arr.map(function(s){ return '- '+s.subj+' '+s.name+' (발생일: '+s.start+')'; }).join(SEP)
-      : '- 본 모니터링 방문 시 확인된 SAE는 없습니다.';
-  }
-
-  const prompt = [
-    '당신은 임상시험 CRA입니다. 아래 정보로 Monitoring Visit F/U Letter를 작성해주세요.',
-    '',
-    '[기본 정보]',
-    '의뢰자: '+(data.sponsor||''), '기관명: '+(data.siteName||''), 'PI: '+(data.pi||''),
-    '방문일: '+visitDateKr, '방문 구분: '+(data.visitType||'')+' IMV #'+(data.visitNum||''), 'CRA: 허영무 (㈜심유)',
-    '',
-    '[Enrollment Status - '+visitDateKr+' 기준]',
-    enrLabels.join(' | '), enrRow,
-    '',
-    '[ICF 관련 이슈]',
-    icfItems.length>0 ? descList(icfItems) : '- 본 모니터링 방문시 확인된 ICF 관련 이슈는 없습니다.',
-    '',
-    '[Protocol/KGCP/SOP 위반 사항]',
-    pdItems.length>0 ? descList(pdItems) : '- 본 모니터링 방문시 확인된 미준수 사항은 없습니다.',
-    '',
-    '[SAE 및 안전성 이슈]', saeList(saeItems),
-    '',
-    '[Other Issues]', otherItems.length>0 ? descList(otherItems) : '- 해당 없음',
-    '',
-    '[문체 규칙]',
-    '인사말: "안녕하십니까 ㈜노보메디슨 POTENTIAL-P 과제 담당 CRO ㈜심유 CRA 허영무 입니다."',
-    '이슈: "~요청드립니다." "~확인 요청드립니다." "~보관 요청드립니다."',
-    '맺음말: "본 임상시험 진행과 관련하여 궁금하신 점 있으시면 언제든지 연락주시기 바라며, 모니터링 방문에 협조하여 주심에 감사드립니다."',
-    '서명: "허 영 무 배상 / CRA, ㈜심유"',
-    '',
-    'Send Date 빈칸, Enrollment 표 포함, 섹션별 구조 유지, 한국어 작성.',
-  ].join(SEP);
-
-  showParseOverlay('F/U Letter 초안 생성 중...', 'AI가 실제 문체로 작성합니다');
+  showParseOverlay('F/U Letter 생성 중...', 'Word 파일을 만들고 있습니다');
 
   try {
-    const endpoint = proxyUrl ? proxyUrl.replace(/\/$/, '') : 'https://api.anthropic.com/v1/messages';
-    const hdrs = proxyUrl
-      ? { 'Content-Type': 'application/json', 'X-Api-Key': apiKey }
-      : { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' };
-    const res = await fetch(endpoint, {
-      method: 'POST', headers: hdrs,
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000,
-        messages: [{ role: 'user', content: prompt }] })
+    const {
+      Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+      AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign, LevelFormat
+    } = window.docx;
+
+    const FONT = 'Malgun Gothic';
+    const sz = pt => pt * 2;
+
+    const mkRun = (text, opts={}) => new TextRun({
+      text, bold: opts.bold||false,
+      font: { name: FONT, eastAsia: FONT, cs: 'Times New Roman' },
+      size: sz(opts.size||10),
     });
-    const json = await res.json();
+
+    const mkPara = (children, opts={}) => new Paragraph({
+      alignment: opts.align || AlignmentType.JUSTIFIED,
+      spacing: { before: opts.before||0, after: opts.after!==undefined?opts.after:120, line:300, lineRule:'auto' },
+      children: Array.isArray(children) ? children : [children],
+    });
+
+    const mkBullet = (text) => new Paragraph({
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { before:0, after:60, line:300 },
+      children: [
+        new TextRun({ text: '- ', font:{name:'Times New Roman'}, size: sz(10) }),
+        new TextRun({ text, font:{name:FONT, eastAsia:FONT}, size: sz(10) }),
+      ],
+    });
+
+    const mkHeading = (text) => new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before:160, after:60 },
+      children: [
+        new TextRun({ text:'• ', font:{name:'Times New Roman'}, size:sz(10), bold:true }),
+        new TextRun({ text, font:{name:FONT,eastAsia:FONT}, size:sz(10), bold:true }),
+      ],
+    });
+
+    const bdr = { style: BorderStyle.SINGLE, size:6, color:'000000' };
+    const allBdrs = { top:bdr, bottom:bdr, left:bdr, right:bdr };
+    const mkCell = (text, opts={}) => new TableCell({
+      borders: allBdrs,
+      width: { size: opts.w||1000, type: WidthType.DXA },
+      shading: opts.header ? { fill:'D9D9D9', type: ShadingType.CLEAR } : undefined,
+      verticalAlign: VerticalAlign.CENTER,
+      margins: { top:40, bottom:40, left:80, right:80 },
+      children: [new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text, bold: opts.header||false,
+          font:{name:FONT,eastAsia:FONT}, size:sz(9) })],
+      })],
+    });
+
+    // 날짜
+    const visitDateKr = (() => {
+      const d = data.visitDate; if (!d) return '';
+      const dt = new Date(d);
+      return dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월 '+dt.getDate()+'일';
+    })();
+    const now = new Date();
+    const sendDate = String(now.getDate()).padStart(2,'0') +
+      ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+      now.getFullYear();
+
+    // Enrollment
+    const enrHdrs = ['Target','Screened','S/F','Enrolled','On-going','Drop-out','Completed'];
+    const enrKeys = ['enrTarget','enrScreened','enrFail','enrEnrolled','enrOngoing','enrDropout','enrCompleted'];
+    const colW = Math.floor(9026 / enrHdrs.length);
+
+    // F/U 분류
+    const allFU = [...(data.fuOld||[]).filter(f=>f.status!=='Resolved'), ...(data.fuNew||[])];
+    const icfItems   = allFU.filter(f=>f.cat==='ICF');
+    const pdItems    = allFU.filter(f=>f.cat==='Protocol Deviation');
+    const saeItems   = data.saeList||[];
+    const otherItems = allFU.filter(f=>!['ICF','Protocol Deviation'].includes(f.cat));
+
+    const sponsor = data.sponsor || '㈜노보메디슨';
+
+    const children = [
+      // Send Date
+      mkPara([mkRun('Send Date: '+sendDate, {size:9})], {align:AlignmentType.LEFT, after:200}),
+      // 제목
+      mkPara([mkRun('Monitoring Visit Follow-up Letter', {bold:true,size:14})], {align:AlignmentType.CENTER, after:240}),
+      // 수신인
+      mkPara([mkRun(data.siteName+', '+data.pi+' 교수님께', {bold:true,size:11})], {align:AlignmentType.LEFT, after:160}),
+      // 인사말
+      mkPara([mkRun('안녕하십니까 '+sponsor+' POTENTIAL-P 과제 담당 CRO ㈜심유 CRA 허영무 입니다.')], {after:80}),
+      // 방문 감사
+      mkPara([mkRun('지난 '+visitDateKr+' 진행된 정기 기관모니터링 방문(Monitoring Visit, MV)에 협조하여 주셔서 다시금 감사인사드리며, 본 모니터링 방문에서 확인한 사항은 다음과 같습니다.')], {after:160}),
+      // Enrollment
+      mkHeading('Enrollment Status ['+visitDateKr+' 기준]'),
+      new Table({
+        width: { size:9026, type:WidthType.DXA },
+        columnWidths: enrHdrs.map(()=>colW),
+        rows: [
+          new TableRow({ children: enrHdrs.map(h=>mkCell(h,{header:true,w:colW})) }),
+          new TableRow({ children: enrKeys.map(k=>mkCell(data[k]||'-',{w:colW})) }),
+        ],
+      }),
+      mkPara([], {before:120, after:0}),
+      // Activities
+      mkHeading('Monitoring Activities'),
+      mkBullet('동의서 확인'), mkBullet('선정/제외 기준 확인'),
+      mkBullet('안전성 평가항목'), mkBullet('Source Document Verification (SDV)'),
+      mkBullet('ISF 및 Subject Binder 검토'),
+      mkPara([], {before:40, after:0}),
+      // ICF
+      mkHeading('ICF 관련 이슈'),
+      ...(icfItems.length>0
+        ? icfItems.map(f=>mkBullet(f.desc))
+        : [mkBullet('본 모니터링 방문시 확인된 ICF 관련 이슈는 없습니다.')]),
+      mkPara([], {before:40, after:0}),
+      // Protocol
+      mkHeading('Protocol, KGCP, SOP 위반 사항'),
+      ...(pdItems.length>0
+        ? pdItems.map(f=>mkBullet(f.desc))
+        : [mkBullet('본 모니터링 방문시 확인된 미준수 사항은 없습니다.')]),
+      mkPara([], {before:40, after:0}),
+      // SAE
+      mkHeading('중대한 이상사례 및 기타 중요한 안전성 관련 이슈'),
+      ...(saeItems.length>0
+        ? saeItems.map(s=>mkBullet('본 모니터링 방문 시 확인된 SAE는 1건('+s.subj+', '+s.name+')입니다.'))
+        : [mkBullet('본 모니터링 방문 시 확인된 SAE는 없습니다.')]),
+      mkPara([], {before:40, after:0}),
+      // Other Issues
+      ...(otherItems.length>0 ? [
+        mkHeading('Other Issues'),
+        ...otherItems.map(f=>mkBullet(f.desc)),
+        mkPara([], {before:40, after:0}),
+      ] : []),
+      // 맺음말
+      mkPara([mkRun('본 임상시험 진행과 관련하여 궁금하신 점 있으시면 언제든지 연락주시기 바라며, 모니터링 방문에 협조하여 주심에 감사드립니다.')], {before:200, after:200}),
+      // 서명
+      mkPara([mkRun('허 영 무 배상 / CRA, ㈜심유')], {align:AlignmentType.LEFT, after:0}),
+    ];
+
+    const doc = new Document({
+      styles: { default: { document: { run: { font: FONT, size: sz(10) } } } },
+      sections: [{
+        properties: {
+          page: {
+            size: { width:11906, height:16838 },
+            margin: { top:1134, right:1418, bottom:1134, left:1418, header:709, footer:599, gutter:0 },
+          },
+        },
+        children,
+      }],
+    });
+
+    const buf = await Packer.toBuffer(doc);
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const site = (data.siteName||'Site').replace(/\s/g,'_').slice(0,10);
+    const num  = data.visitNum||'';
+    a.href = url; a.download = 'FU_Letter_IMV'+num+'_'+site+'_'+sendDate+'.docx';
+    a.click(); URL.revokeObjectURL(url);
     hideParseOverlay();
-    showFULetterModal(json.content?.[0]?.text || '');
+    showToast('✅ F/U Letter 다운로드 완료');
+
   } catch(err) {
     hideParseOverlay();
+    console.error(err);
     showToast('❌ F/U Letter 생성 실패: ' + err.message);
   }
 }
