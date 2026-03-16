@@ -2575,6 +2575,16 @@ Resolved F/U는 제외. JSON만 출력.`;
       if (basicInfo.visitNum && basicInfo.visitType) {
         setField('lastVisitType', `${basicInfo.visitType} IMV #${basicInfo.visitNum}`);
       }
+      // 방문 번호: 이전 번호 +1 (다중 업로드 시 현재 입력값과 비교해 더 큰 값 사용)
+      if (basicInfo.visitNum) {
+        const prevNum = parseInt(basicInfo.visitNum) || 0;
+        const nextNum = prevNum + 1;
+        const curNum = parseInt(document.getElementById('visitNum')?.value || '0') || 0;
+        // 이미 더 높은 번호가 입력돼 있으면 유지, 아니면 +1로 업데이트
+        if (nextNum > curNum) {
+          setField('visitNum', String(nextNum));
+        }
+      }
       // Enrollment
       if (basicInfo.enrollment) {
         Object.entries(basicInfo.enrollment).forEach(([k,v]) => setField(k, v));
