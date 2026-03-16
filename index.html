@@ -1939,9 +1939,9 @@ function fillSOPXml(xml, data) {
   const newFuHeader = cells.findIndex(c => c.text === 'New' && cells.indexOf(c) > oldFuHeader);
 
   // Old F/U 항목 삽입
-  if (oldFuHeader > -1 && (data.fuOld||[]).length > 0) {{
+  if (oldFuHeader > -1 && (data.fuOld||[]).length > 0) {
     let rowStart = oldFuHeader + 7; // 헤더 셀(#,Category,Date,Description,Action,Resolved) skip
-    for (let i = 0; i < Math.min(data.fuOld.length, 3); i++) {{
+    for (let i = 0; i < Math.min(data.fuOld.length, 3); i++) {
       const fu = data.fuOld[i];
       const offset = i * 6;
       cells = getCells();
@@ -1951,15 +1951,15 @@ function fillSOPXml(xml, data) {
       replaceCell(cells, rowStart+offset+3, insertTextInCell(cells[rowStart+offset+3], fu.desc||''));         cells=getCells();
       replaceCell(cells, rowStart+offset+4, insertTextInCell(cells[rowStart+offset+4], fu.action||''));       cells=getCells();
       replaceCell(cells, rowStart+offset+5, insertTextInCell(cells[rowStart+offset+5], fu.status||'Ongoing')); cells=getCells();
-    }}
-  }}
+    }
+  }
 
   // New F/U 항목 삽입
   cells = getCells();
   const newFuIdx = cells.findIndex(c => c.text === 'New');
-  if (newFuIdx > -1 && (data.fuNew||[]).length > 0) {{
+  if (newFuIdx > -1 && (data.fuNew||[]).length > 0) {
     let rowStart = newFuIdx + 6;
-    for (let i = 0; i < Math.min(data.fuNew.length, 3); i++) {{
+    for (let i = 0; i < Math.min(data.fuNew.length, 3); i++) {
       const fu = data.fuNew[i];
       const offset = i * 6;
       cells = getCells();
@@ -1969,11 +1969,11 @@ function fillSOPXml(xml, data) {
       replaceCell(cells, rowStart+offset+3, insertTextInCell(cells[rowStart+offset+3], fu.desc||''));         cells=getCells();
       replaceCell(cells, rowStart+offset+4, insertTextInCell(cells[rowStart+offset+4], fu.action||''));       cells=getCells();
       replaceCell(cells, rowStart+offset+5, insertTextInCell(cells[rowStart+offset+5], 'N/A'));               cells=getCells();
-    }}
-  }}
+    }
+  }
 
   return xml;
-}}
+}
 
 // ============================================================
 // FILE UPLOAD & PARSE (SAE / IP / F-U)
@@ -2215,7 +2215,7 @@ JSON 배열로만 출력:
 JSON만 출력하세요.`;
       const result = await callClaudeWithFile(file, prompt);
       if (result) {
-        const clean = result.replace(/\`\`\`json|\`\`\`/g, '').trim();
+        const clean = result.replace(/```json|```/g, '').trim();
         fuItems = JSON.parse(clean);
       }
     }
