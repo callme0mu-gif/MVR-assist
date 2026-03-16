@@ -383,6 +383,24 @@
   .prev-mvr-btn:hover{background:#3a7de8;transform:translateY(-1px);box-shadow:0 4px 16px rgba(79,142,247,.3)}
   .prev-mvr-filenames{font-size:11px;color:var(--accent);font-style:italic;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+  /* 저장/불러오기 버튼 */
+  .save-btn,.load-btn{padding:7px 13px;border:none;border-radius:7px;font-family:var(--head);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+  .save-btn{background:rgba(61,217,164,.15);color:#3dd9a4;border:1px solid rgba(61,217,164,.3)}
+  .save-btn:hover{background:rgba(61,217,164,.25)}
+  .load-btn{background:rgba(79,142,247,.15);color:var(--accent);border:1px solid rgba(79,142,247,.3)}
+  .load-btn:hover{background:rgba(79,142,247,.25)}
+  .modal-save-btn{padding:8px 16px;background:var(--accent);border:none;border-radius:7px;color:#fff;font-family:var(--head);font-size:12px;font-weight:600;cursor:pointer}
+  .modal-cancel-btn{padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text2);font-family:var(--head);font-size:12px;cursor:pointer}
+  .report-item{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface2);border-radius:8px;margin-bottom:6px;border:1px solid var(--border)}
+  .report-item-name{flex:1;font-size:13px;font-weight:600;color:var(--text)}
+  .report-item-date{font-size:11px;color:var(--text3)}
+  .report-item-load{padding:5px 12px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:600;cursor:pointer}
+  .report-item-del{padding:5px 10px;background:rgba(255,100,100,.15);border:1px solid rgba(255,100,100,.3);border-radius:6px;color:#ff6464;font-size:11px;cursor:pointer}
+  .export-btn{padding:7px 13px;background:rgba(255,200,50,.12);border:1px solid rgba(255,200,50,.3);border-radius:7px;color:#ffc832;font-family:var(--head);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .export-btn:hover{background:rgba(255,200,50,.22)}
+  .import-btn{padding:7px 13px;background:rgba(61,217,164,.12);border:1px solid rgba(61,217,164,.3);border-radius:7px;color:#3dd9a4;font-family:var(--head);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .import-btn:hover{background:rgba(61,217,164,.22)}
+
   .sop-btn {
     flex: 1;
     padding: 11px;
@@ -412,9 +430,34 @@
     <button class="tab-btn" style="opacity:.5">💊 IP Log<span class="soon-badge">SOON</span></button>
     <button class="tab-btn" style="opacity:.5">🔬 Lab 대조<span class="soon-badge">SOON</span></button>
   </div>
-  <button class="settings-btn" id="settingsBtn" onclick="openSettings()">
-    ⚙ API 설정
-  </button>
+  <div style="display:flex;gap:6px;align-items:center">
+    <button class="save-btn" onclick="saveReport()" title="현재 작성 내용 저장">💾 저장</button>
+    <button class="load-btn" onclick="showLoadModal()" title="저장된 레포트 불러오기">📂 불러오기</button>
+    <button class="settings-btn" id="settingsBtn" onclick="openSettings()">⚙ API 설정</button>
+  </div>
+</div>
+
+<!-- SAVE/LOAD MODAL -->
+<div class="modal-overlay" id="loadModalOverlay" onclick="closeLoadModal(event)" style="display:none">
+  <div class="modal-box" style="width:520px;max-width:95vw">
+    <div class="modal-title">📂 저장된 레포트</div>
+    <div id="savedReportsList" style="max-height:400px;overflow-y:auto;margin:12px 0"></div>
+    <!-- 이름으로 저장 -->
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <input id="saveNameInput" type="text" placeholder="레포트 이름 (예: 서울대_IMV3)" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+      <button class="modal-save-btn" onclick="saveReportAs()">💾 이름으로 저장</button>
+    </div>
+    <!-- 파일 내보내기/가져오기 -->
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
+      <span style="font-size:11px;color:var(--text3);flex:1">💡 다른 PC에서 이어서 작업하려면 파일로 내보내기 후 가져오기</span>
+      <button class="export-btn" onclick="exportCurrentReport()">📤 파일로 내보내기</button>
+      <label class="import-btn">
+        📥 파일 가져오기
+        <input type="file" accept=".json" style="display:none" onchange="importReport(this)">
+      </label>
+      <button class="modal-cancel-btn" onclick="closeLoadModal()">닫기</button>
+    </div>
+  </div>
 </div>
 
 <!-- API KEY SETTINGS MODAL -->
@@ -482,15 +525,15 @@
     </div>
     <div class="card-body">
       <div class="field-row">
-        <div class="field"><label>Sponsor</label><input type="text" id="sponsor" placeholder="㈜노보메디슨"></div>
-        <div class="field"><label>Site No.</label><input type="text" id="siteNo" placeholder="06"></div>
+        <div class="field"><label>Sponsor</label><input type="text" id="sponsor" placeholder="의뢰자명"></div>
+        <div class="field"><label>Site No.</label><input type="text" id="siteNo" placeholder="Site No."></div>
       </div>
-      <div class="field"><label>기관명</label><input type="text" id="siteName" placeholder="가톨릭대학교 여의도성모병원"></div>
+      <div class="field"><label>기관명</label><input type="text" id="siteName" placeholder="기관명"></div>
       <div class="field-row">
-        <div class="field"><label>PI (시험책임자)</label><input type="text" id="pi" placeholder="전영우"></div>
-        <div class="field"><label>CRC</label><input type="text" id="crc" placeholder="이유진"></div>
+        <div class="field"><label>PI (시험책임자)</label><input type="text" id="pi" placeholder="PI 성명"></div>
+        <div class="field"><label>CRC</label><input type="text" id="crc" placeholder="CRC 성명"></div>
       </div>
-      <div class="field"><label>관리약사</label><input type="text" id="pharmacist" placeholder="김민경"></div>
+      <div class="field"><label>관리약사</label><input type="text" id="pharmacist" placeholder="관리약사 성명"></div>
     </div>
   </div>
 
@@ -505,13 +548,13 @@
         <div class="field"><label>방문 유형</label>
           <select id="visitType"><option>On-Site</option><option>Telephone</option><option>Remote</option></select>
         </div>
-        <div class="field"><label>방문 번호</label><input type="text" id="visitNum" placeholder="5"></div>
+        <div class="field"><label>방문 번호</label><input type="text" id="visitNum" placeholder="방문 번호"></div>
       </div>
       <div class="field-row">
         <div class="field"><label>방문일</label><input type="date" id="visitDate"></div>
         <div class="field"><label>이전 방문일</label><input type="date" id="lastVisitDate"></div>
       </div>
-      <div class="field"><label>이전 방문 구분</label><input type="text" id="lastVisitType" placeholder="IMV #3,4"></div>
+      <div class="field"><label>이전 방문 구분</label><input type="text" id="lastVisitType" placeholder="예: On-Site IMV #2"></div>
     </div>
   </div>
 
@@ -2805,6 +2848,330 @@ function convertDate(dateStr) {
 // ============================================================
 // SETTINGS (API KEY + PROXY)
 // ============================================================
+
+// ── 파일 내보내기 (현재 작업 중인 레포트 → .json 파일 다운로드) ──
+function exportCurrentReport() {
+  const data = collectAllData();
+  const name = window._currentReportKey
+    ? window._currentReportKey.replace(REPORT_PREFIX, '')
+    : (() => {
+        const site = document.getElementById('siteName')?.value || 'MVR';
+        const num  = document.getElementById('visitNum')?.value || '';
+        return site.slice(0,6) + (num ? '_IMV'+num : '');
+      })();
+
+  data._exportName = name;
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const dt   = new Date();
+  const ds   = `${dt.getFullYear()}${String(dt.getMonth()+1).padStart(2,'0')}${String(dt.getDate()).padStart(2,'0')}`;
+  a.href     = url;
+  a.download = `MVR_${name}_${ds}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 내보내기 완료: ' + a.download);
+}
+
+// ── 파일 가져오기 (.json 파일 → 폼 복원 + localStorage 저장) ──
+function importReport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const name = data._exportName || file.name.replace('.json','');
+      const key  = REPORT_PREFIX + name;
+
+      // localStorage에 저장
+      localStorage.setItem(key, JSON.stringify(data));
+      window._currentReportKey = key;
+
+      // 폼 복원
+      restoreAllData(data);
+      renderSavedReports();
+      showToast('📥 가져오기 완료: ' + name);
+      closeLoadModal();
+    } catch(err) {
+      showToast('❌ 가져오기 실패: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ============================================================
+// 레포트 저장 / 불러오기 (localStorage)
+// ============================================================
+const REPORT_PREFIX = 'cra_report_';
+
+function collectAllData() {
+  // 현재 폼의 모든 데이터를 JSON으로 수집
+  const v = id => document.getElementById(id)?.value || '';
+  const data = {
+    // 기본 정보
+    sponsor: v('sponsor'), pi: v('pi'), siteName: v('siteName'), siteNo: v('siteNo'),
+    crc: v('crc'), pharmacist: v('pharmacist'),
+    visitType: v('visitType'), visitNum: v('visitNum'), visitDate: v('visitDate'),
+    lastVisitDate: v('lastVisitDate'), lastVisitType: v('lastVisitType'),
+    // Enrollment
+    enrTarget: v('enrTarget'), enrScreened: v('enrScreened'), enrFail: v('enrFail'),
+    enrEnrolled: v('enrEnrolled'), enrOngoing: v('enrOngoing'),
+    enrDropout: v('enrDropout'), enrCompleted: v('enrCompleted'),
+    enrComment: v('enrComment'),
+    // Checklist
+    checklist: Array.from(document.querySelectorAll('.checklist-item')).map(item => {
+      const code = item.dataset.code;
+      const checked = item.querySelector(`input[name="r_${code}"]:checked`);
+      const cmt = document.getElementById(`cmt_${code}`)?.value || '';
+      return { code, val: checked?.value || 'N/A', cmt };
+    }),
+    // ICF
+    icfList: Array.from(document.querySelectorAll('#icfList .dyn-row')).map(row => {
+      const id = row.id;
+      return {
+        subj: document.getElementById(id+'_subj')?.value || '',
+        date: document.getElementById(id+'_date')?.value || '',
+        type: document.getElementById(id+'_type')?.value || '',
+        ver:  document.getElementById(id+'_ver')?.value  || '',
+        rem:  document.getElementById(id+'_rem')?.value  || '',
+        note: document.getElementById(id+'_note')?.value || '',
+      };
+    }),
+    // SAE
+    saeList: Array.from(document.querySelectorAll('#saeList .dyn-row')).map(row => {
+      const id = row.id;
+      return {
+        subj:    document.getElementById(id+'_subj')?.value    || '',
+        name:    document.getElementById(id+'_name')?.value    || '',
+        start:   document.getElementById(id+'_start')?.value   || '',
+        aware:   document.getElementById(id+'_aware')?.value   || '',
+        irb:     document.getElementById(id+'_irb')?.value     || '',
+        sponsor: document.getElementById(id+'_sponsor')?.value || '',
+        status:  document.getElementById(id+'_status')?.value  || '',
+      };
+    }),
+    // SDV
+    sdvList: Array.from(document.querySelectorAll('#sdvList .dyn-row')).map(row => {
+      const id = row.id;
+      return {
+        subj:    document.getElementById(id+'_subj')?.value    || '',
+        visit:   document.getElementById(id+'_visit')?.value   || '',
+        type:    document.getElementById(id+'_type')?.value    || '',
+        comment: document.getElementById(id+'_comment')?.value || '',
+      };
+    }),
+    // IP
+    ipList: Array.from(document.querySelectorAll('#ipList .dyn-row')).map(row => {
+      const id = row.id;
+      return {
+        name:  document.getElementById(id+'_name')?.value  || '',
+        dose:  document.getElementById(id+'_dose')?.value  || '',
+        lot:   document.getElementById(id+'_lot')?.value   || '',
+        exp:   document.getElementById(id+'_exp')?.value   || '',
+        stock: document.getElementById(id+'_stock')?.value || '',
+      };
+    }),
+    // F/U Old
+    fuOld: Array.from(document.querySelectorAll('#fuOldList .dyn-row')).map(row => {
+      const id = row.id;
+      return {
+        cat:    document.getElementById(id+'_cat')?.value    || '',
+        date:   document.getElementById(id+'_date')?.value   || '',
+        status: document.getElementById(id+'_status')?.value || '',
+        desc:   document.getElementById(id+'_desc')?.value   || '',
+        action: document.getElementById(id+'_action')?.value || '',
+      };
+    }),
+    // F/U New
+    fuNew: Array.from(document.querySelectorAll('#fuNewList .dyn-row')).map(row => {
+      const id = row.id;
+      return {
+        cat:    document.getElementById(id+'_cat')?.value    || '',
+        date:   document.getElementById(id+'_date')?.value   || '',
+        desc:   document.getElementById(id+'_desc')?.value   || '',
+        action: document.getElementById(id+'_action')?.value || '',
+      };
+    }),
+    _savedAt: new Date().toISOString(),
+  };
+  return data;
+}
+
+function restoreAllData(data) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+  // 기본 정보
+  ['sponsor','pi','siteName','siteNo','crc','pharmacist',
+   'visitType','visitNum','visitDate','lastVisitDate','lastVisitType',
+   'enrTarget','enrScreened','enrFail','enrEnrolled','enrOngoing',
+   'enrDropout','enrCompleted','enrComment'].forEach(k => set(k, data[k]));
+
+  // Checklist
+  (data.checklist || []).forEach(item => {
+    const radio = document.querySelector(`input[name="r_${item.code}"][value="${item.val}"]`);
+    if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', {bubbles:true})); }
+    const cmtEl = document.getElementById(`cmt_${item.code}`);
+    if (cmtEl) cmtEl.value = item.cmt || '';
+  });
+
+  // ICF
+  document.getElementById('icfList').innerHTML = '';
+  (data.icfList || []).forEach(r => {
+    addICF(); const id = 'icf_' + cnt.icf;
+    set(id+'_subj', r.subj); set(id+'_date', r.date);
+    set(id+'_type', r.type); set(id+'_ver', r.ver);
+    set(id+'_rem', r.rem);   set(id+'_note', r.note);
+  });
+
+  // SAE
+  document.getElementById('saeList').innerHTML = '';
+  (data.saeList || []).forEach(r => {
+    addSAE(); const id = 'sae_' + cnt.sae;
+    set(id+'_subj', r.subj);    set(id+'_name', r.name);
+    set(id+'_start', r.start);  set(id+'_aware', r.aware);
+    set(id+'_irb', r.irb);      set(id+'_sponsor', r.sponsor);
+    set(id+'_status', r.status);
+  });
+
+  // SDV
+  document.getElementById('sdvList').innerHTML = '';
+  (data.sdvList || []).forEach(r => {
+    addSDV(); const id = 'sdv_' + cnt.sdv;
+    set(id+'_subj', r.subj);   set(id+'_visit', r.visit);
+    set(id+'_type', r.type);   set(id+'_comment', r.comment);
+  });
+
+  // IP
+  document.getElementById('ipList').innerHTML = '';
+  (data.ipList || []).forEach(r => {
+    addIP(); const id = 'ip_' + cnt.ip;
+    set(id+'_name', r.name); set(id+'_dose', r.dose);
+    set(id+'_lot', r.lot);   set(id+'_exp', r.exp);
+    set(id+'_stock', r.stock);
+  });
+
+  // F/U Old
+  document.getElementById('fuOldList').innerHTML = '';
+  (data.fuOld || []).forEach(r => {
+    addFU('old'); const id = 'fu_' + cnt.fu;
+    set(id+'_cat', r.cat);    set(id+'_date', r.date);
+    set(id+'_status', r.status); set(id+'_desc', r.desc);
+    set(id+'_action', r.action);
+  });
+
+  // F/U New
+  document.getElementById('fuNewList').innerHTML = '';
+  (data.fuNew || []).forEach(r => {
+    addFU('new'); const id = 'fu_' + cnt.fu;
+    set(id+'_cat', r.cat);    set(id+'_date', r.date);
+    set(id+'_desc', r.desc);  set(id+'_action', r.action);
+  });
+}
+
+function saveReport() {
+  // 빠른 저장: 현재 레포트명이 있으면 덮어쓰기, 없으면 모달 오픈
+  const current = window._currentReportKey;
+  if (current) {
+    const data = collectAllData();
+    localStorage.setItem(current, JSON.stringify(data));
+    showToast('✅ 저장 완료: ' + current.replace(REPORT_PREFIX, ''));
+  } else {
+    showLoadModal();
+    setTimeout(() => {
+      const nameInput = document.getElementById('saveNameInput');
+      if (nameInput) {
+        const site = document.getElementById('siteName')?.value || '';
+        const num  = document.getElementById('visitNum')?.value || '';
+        if (site || num) nameInput.value = (site ? site.slice(0,6) : '') + (num ? '_IMV'+num : '');
+        nameInput.focus();
+      }
+    }, 100);
+  }
+}
+
+function saveReportAs() {
+  const nameInput = document.getElementById('saveNameInput');
+  const name = nameInput?.value?.trim();
+  if (!name) { showToast('⚠️ 레포트 이름을 입력하세요'); return; }
+  const key = REPORT_PREFIX + name;
+  const data = collectAllData();
+  localStorage.setItem(key, JSON.stringify(data));
+  window._currentReportKey = key;
+  showToast('✅ 저장 완료: ' + name);
+  renderSavedReports();
+  if (nameInput) nameInput.value = '';
+}
+
+function showLoadModal() {
+  renderSavedReports();
+  document.getElementById('loadModalOverlay').style.display = 'flex';
+}
+
+function closeLoadModal(e) {
+  if (!e || e.target.id === 'loadModalOverlay') {
+    document.getElementById('loadModalOverlay').style.display = 'none';
+  }
+}
+
+function renderSavedReports() {
+  const container = document.getElementById('savedReportsList');
+  if (!container) return;
+  const keys = Object.keys(localStorage).filter(k => k.startsWith(REPORT_PREFIX)).sort().reverse();
+  if (keys.length === 0) {
+    container.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px;text-align:center">저장된 레포트가 없습니다</div>';
+    return;
+  }
+  container.innerHTML = keys.map(key => {
+    const name = key.replace(REPORT_PREFIX, '');
+    let savedAt = '';
+    try {
+      const d = JSON.parse(localStorage.getItem(key));
+      if (d?._savedAt) {
+        const dt = new Date(d._savedAt);
+        savedAt = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
+      }
+    } catch(e) {}
+    const isCurrent = window._currentReportKey === key;
+    return `<div class="report-item" style="${isCurrent ? 'border-color:var(--accent)' : ''}">
+      <div>
+        <div class="report-item-name">${isCurrent ? '● ' : ''}${name}</div>
+        ${savedAt ? `<div class="report-item-date">저장: ${savedAt}</div>` : ''}
+      </div>
+      <button class="report-item-load" onclick="loadReport('${key}')">불러오기</button>
+      <button class="report-item-del" onclick="deleteReport('${key}')">삭제</button>
+    </div>`;
+  }).join('');
+}
+
+function loadReport(key) {
+  try {
+    const data = JSON.parse(localStorage.getItem(key));
+    if (!data) { showToast('❌ 불러오기 실패'); return; }
+    restoreAllData(data);
+    window._currentReportKey = key;
+    const name = key.replace(REPORT_PREFIX, '');
+    showToast('✅ 불러오기 완료: ' + name);
+    closeLoadModal();
+  } catch(e) {
+    showToast('❌ 불러오기 실패: ' + e.message);
+  }
+}
+
+function deleteReport(key) {
+  const name = key.replace(REPORT_PREFIX, '');
+  if (!confirm(`"${name}" 레포트를 삭제할까요?`)) return;
+  localStorage.removeItem(key);
+  if (window._currentReportKey === key) window._currentReportKey = null;
+  renderSavedReports();
+  showToast('🗑️ 삭제 완료: ' + name);
+}
+
+// 현재 레포트 키 초기화
+window._currentReportKey = null;
+
+
 function openSettings() {
   const key = localStorage.getItem('cra_api_key') || '';
   const proxy = localStorage.getItem('cra_proxy_url') || '';
