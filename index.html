@@ -1840,7 +1840,19 @@ function fillSOPXml(xml, data) {
 
   // ── Visit ──
   const visitNum = data.visitNum || '';
-  xml = xml.replace('On-Site Visit (#</w:t>', `On-Site Visit (# ${visitNum}</w:t>`);
+  // visitNum 삽입 - 여러 방식 시도
+  const vnEscaped = escXml(visitNum);
+  // 방법1: 단순 run 내 텍스트 교체
+  if (xml.includes('On-Site Visit (#</w:t>')) {
+    xml = xml.replace('On-Site Visit (#</w:t>', 'On-Site Visit (# ' + vnEscaped + '</w:t>');
+  } else {
+    // 방법2: permStart 기반 - 'On-Site Visit (#' 다음 빈 run에 삽입
+    xml = xml.replace(
+      /(<w:t[^>]*>On-Site Visit \(#\s*<\/w:t>)(<\/w:r>)(<w:permStart[^\/]*\/>)(<w:r[^>]*>)(<w:rPr>.*?<\/w:rPr>)(<w:t[^>]*>)(\s*)(<\/w:t>)/s,
+      (m, t1, r1, perm, r2, rpr, t2open, space, t2close) =>
+        t1 + r1 + perm + r2 + rpr + t2open + vnEscaped + t2close
+    );
+  }
   cells = getCells();
 
   const lastVisitIdx = findCellIdx(cells, 'Last Visit Date');
@@ -1857,7 +1869,7 @@ function fillSOPXml(xml, data) {
       const escaped = escXml(name);
       // permId 이후 첫 번째 <w:t...> 내용 교체
       const re = new RegExp('(w:id="' + permId + '"[\\s\\S]{1,200}?<w:t[^>]*>)([^<]*)(</w:t>)');
-      return cellXml.replace(re, (_, pre, _old, post) => pre + escaped + post);
+      return cellXml.replace(re, (m, g1, g2, g3) => g1 + escaped + g3);
     };
     contactCell = replaceContactName(contactCell, '1172112041', data.pi||'');
     contactCell = replaceContactName(contactCell, '1139291964', data.crc||'');
@@ -1938,15 +1950,16 @@ function fillSOPXml(xml, data) {
     .filter(c => c.text.startsWith('Comments:'));
 
   Object.keys(sectionComments).forEach(secNum => {
-    const cmtText = sectionComments[secNum].join('\n');
-    if (!cmtText) return;
-    // 해당 섹션 번호에 맞는 Comments 셀 찾기 (순서 기반)
+    const cmtLines = sectionComments[secNum];
+    if (!cmtLines || !cmtLines.length) return;
     const targetIdx = parseInt(secNum) - 1;
     if (targetIdx < commentCells.length) {
       const cmtCell = commentCells[targetIdx];
-      const newRun = makeRun(cmtText);
-      const newCellContent = cmtCell.full.replace(/<\/w:tc>$/,
-        `<w:p><w:pPr><w:rPr><w:rFonts w:cs="Times New Roman"/><w:sz w:val="18"/></w:rPr></w:pPr>${newRun}</w:p></w:tc>`);
+      // 각 코멘트를 별도 단락으로 (\n 직접 삽입 금지 - XML 파손 원인)
+      const parasXml = cmtLines.map(line =>
+        `<w:p><w:pPr><w:rPr><w:rFonts w:cs="Times New Roman"/><w:sz w:val="18"/></w:rPr></w:pPr>${makeRun(line)}</w:p>`
+      ).join('');
+      const newCellContent = cmtCell.full.replace(/<\/w:tc>$/, parasXml + '</w:tc>');
       xml = xml.slice(0, cmtCell.start) + newCellContent + xml.slice(cmtCell.end);
       cells = getCells();
     }
@@ -2467,20 +2480,32 @@ async function parsePrevMVR(input) {
       }
 
       // Enrollment 파싱
+      // SOP 양식 셀명과 동일하게 맞춤
       const enrLabels = ['Target','Screened','Screening Failure','Enrolled','On-going','Drop-out','Completed'];
       const enrKeys   = ['enrTarget','enrScreened','enrFail','enrEnrolled','enrOngoing','enrDropout','enrCompleted'];
+      // 미리보기용 레이블도 추가 시도 (화순 MVR 등 약식 표기 대응)
+      const enrLabelsAlt = ['Target','Screened','Scr. Fail','Enrolled','On-going','Drop-out','Completed'];
       enrLabels.forEach((lbl, i) => {
-        const idx = cellTexts.indexOf(lbl);
-        if (idx > -1) basicInfo.enrollment[enrKeys[i]] = cellTexts[idx+1] || '0';
+        let idx = cellTexts.indexOf(lbl);
+        // 약식 레이블도 시도 (Scr. Fail 등)
+        if (idx < 0) idx = cellTexts.indexOf(enrLabelsAlt[i]);
+        if (idx > -1) {
+          const val = cellTexts[idx+1] || '0';
+          // 숫자가 아닌 값(헤더 텍스트)은 무시
+          if (/^\d+$/.test(val.trim()) || val.trim() === '0') {
+            basicInfo.enrollment[enrKeys[i]] = val.trim();
+          }
+        }
       });
 
       // F/U 파싱
       const oldIdx = cellTexts.findIndex(t => t === 'Old');
       const newIdx = cellTexts.findIndex((t,i) => t === 'New' && i > oldIdx);
-      // New → Old 순서로 수집 (입력은 New 먼저, Old 나중)
+      // Old Ongoing 먼저 → New 나중 순서로 수집
+      // (Resolved는 parseFUSection 내에서 자동 제외)
       const oldItems = oldIdx > -1 ? parseFUSection(cellTexts, oldIdx, newIdx > oldIdx ? newIdx : cellTexts.length, 'old') : [];
       const newItems = newIdx > -1 ? parseFUSection(cellTexts, newIdx, cellTexts.length, 'new') : [];
-      fuItems = fuItems.concat(newItems).concat(oldItems);
+      fuItems = fuItems.concat(oldItems).concat(newItems);
 
     } else if (file.name.endsWith('.pdf')) {
       const apiKey = localStorage.getItem('cra_api_key') || '';
@@ -2541,22 +2566,27 @@ Resolved F/U는 제외. JSON만 출력.`;
       }
     }
 
-    // ── F/U 항목 입력 (New → Old 순서, 각각 해당 리스트에) ──
+    // ── F/U 항목 입력 ──
+    // 이전 MVR의 New(신규) + Old Ongoing → 모두 본 방문의 Old(이월) 항목
+    // New 먼저, Old Ongoing 나중 순서로 fuOldList에 삽입
     if (fuItems.length > 0) {
       document.getElementById('fuOldList').innerHTML = '';
       document.getElementById('fuNewList').innerHTML = '';
       fuItems.forEach(fu => {
-        const listType = fu.type === 'new' ? 'new' : 'old';
-        addFU(listType);
+        // 이전 MVR의 new든 old_ongoing이든 → 본 방문에서는 모두 Old 이월 항목
+        addFU('old');
         const id = 'fu_' + cnt.fu;
         const set = (field, val) => { const el = document.getElementById(id + '_' + field); if (el && val) el.value = val; };
-        const catMap = {'SAE':'SAE','ICF':'ICF','AE':'AE','IP':'IP','IRB':'IRB','SDV':'SDV'};
+        const catMap = {'SAE':'SAE','ICF':'ICF','AE':'AE','IP':'IP','IRB':'IRB','SDV':'SDV',
+          'Protocol Deviation':'SAE','Training log':'기타','Document':'기타','Documents':'기타',
+          'EDC':'기타','PK':'기타','IP':'IP','NTF':'기타','ICF':'ICF','AE':'AE','IRB':'IRB'};
         set('cat', catMap[fu.cat] || '기타');
         set('date', fu.date || '');
         set('desc', fu.desc || '');
         set('action', fu.action || '');
+        // status: 이전 MVR의 New였으면 이번엔 Ongoing, Old Ongoing도 Ongoing
         const statusEl = document.getElementById(id + '_status');
-        if (statusEl && fu.type !== 'new') statusEl.value = 'Ongoing';
+        if (statusEl) statusEl.value = 'Ongoing';
       });
     }
 
