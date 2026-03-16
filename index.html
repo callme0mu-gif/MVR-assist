@@ -2671,10 +2671,18 @@ Resolved F/U는 제외. JSON만 출력.`;
         addFU('old');
         const id = 'fu_' + cnt.fu;
         const set = (field, val) => { const el = document.getElementById(id + '_' + field); if (el && val) el.value = val; };
-        const catMap = {'SAE':'SAE','ICF':'ICF','AE':'AE','IP':'IP','IRB':'IRB','SDV':'SDV',
-          'Protocol Deviation':'SAE','Training log':'기타','Document':'기타','Documents':'기타',
-          'EDC':'기타','PK':'기타','IP':'IP','NTF':'기타','ICF':'ICF','AE':'AE','IRB':'IRB'};
-        set('cat', catMap[fu.cat] || '기타');
+        // 카테고리 정규화
+        const normCat = (c) => {
+          const s = (c||'').toLowerCase();
+          if (s.includes('sae') || s.includes('susar')) return 'SAE';
+          if (s.includes('icf') || s.includes('동의')) return 'ICF';
+          if (s === 'ae' || s.includes('이상사례')) return 'AE';
+          if (s === 'ip' || s.includes('의약품') || s.includes('반납')) return 'IP';
+          if (s.includes('irb') || s.includes('심사')) return 'IRB';
+          if (s.includes('sdv')) return 'SDV';
+          return '기타';
+        };
+        set('cat', normCat(fu.cat));
         set('date', fu.date || '');
         set('desc', fu.desc || '');
         set('action', fu.action || '');
@@ -2720,28 +2728,66 @@ function convertMVRDate(dateStr) {
 
 function parseFUSection(cells, startIdx, endIdx, secType) {
   const items = [];
-  const cats = ['SAE','ICF','AE','IP','IRB','SDV','기타'];
-  let i = startIdx + 1;
-  // 첫 카테고리 셀 찾기 (헤더 skip)
-  while (i < endIdx && !cats.includes(cells[i])) i++;
-  // 카테고리 단위로 파싱
-  while (i < endIdx) {
-    if (!cats.includes(cells[i])) { i++; continue; }
-    const cat    = cells[i]   || '';
-    const date   = cells[i+1] || '';
-    const desc   = cells[i+2] || '';
-    const action = cells[i+3] || '';
-    const status = cells[i+4] || '';
-    const isResolved = status.toLowerCase().includes('resolved');
-    if (secType === 'old' && !isResolved && desc) {
-      items.push({ type:'old_ongoing', cat, date:convertDate(date), desc, action });
-    } else if (secType === 'new' && desc) {
-      items.push({ type:'new', cat, date:convertDate(date), desc, action });
-    }
-    i += 5;
+
+  // 헤더 구조: Old/New 다음에 '#', 'Category', 'Date Opened', 'Description', 'Action(s) Taken', 'Resolved/Ongoing'
+  // 데이터 행: '' (번호칸), Category, Date, Description, Action, Status  → 6셀 단위
+  // 헤더 행 skip: startIdx(Old/New) + 헤더셀 개수
+  
+  // 헤더 끝 찾기 (Resolved/Ongoing 또는 Follow-up 이후부터 데이터)
+  let dataStart = startIdx + 1;
+  const headerMarkers = ['#','Category','Date Opened','Description','Action','Resolved','Follow-up','Ongoing'];
+  while (dataStart < endIdx && headerMarkers.some(m => cells[dataStart]?.includes(m))) {
+    dataStart++;
   }
+
+  // 데이터 파싱: 6셀씩 읽기 (번호빈칸 + cat + date + desc + action + status)
+  let i = dataStart;
+  while (i + 4 < endIdx) {
+    // 번호 빈칸 또는 숫자 확인
+    const maybeNum = cells[i] || '';
+    if (maybeNum !== '' && !/^\d+$/.test(maybeNum.trim())) {
+      i++;
+      continue;
+    }
+
+    const cat    = cells[i+1] || '';
+    const date   = cells[i+2] || '';
+    const desc   = cells[i+3] || '';
+    const action = cells[i+4] || '';
+    const status = cells[i+5] || '';
+
+    // 유효성: 카테고리와 설명이 있어야 함, 카테고리가 너무 길면 skip
+    if (!cat || cat.length > 40 || !desc || desc.length < 3) {
+      i++;
+      continue;
+    }
+
+    // 날짜 형식 확인 (ddMmmYYYY 또는 YYYY-MM-DD)
+    const hasDate = /\d{2}[A-Za-z]{3}\d{4}|\d{4}-\d{2}-\d{2}/.test(date);
+    if (!hasDate && date.length > 20) {
+      i++;
+      continue;
+    }
+
+    const isResolved = status.toLowerCase().includes('resolved');
+
+    if (secType === 'old' && !isResolved) {
+      items.push({ type: 'old_ongoing', cat, date: convertDate(date), desc, action });
+      i += 6;
+    } else if (secType === 'old' && isResolved) {
+      // Resolved → 제외
+      i += 6;
+    } else if (secType === 'new') {
+      items.push({ type: 'new', cat, date: convertDate(date), desc, action });
+      i += 6;
+    } else {
+      i++;
+    }
+  }
+
   return items;
 }
+
 
 function convertDate(dateStr) {
   if (!dateStr) return '';
