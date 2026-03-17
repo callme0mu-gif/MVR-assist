@@ -575,11 +575,16 @@
   <div class="card" id="card-study">
     <div class="card-header" onclick="toggleCard('study')">
       <span class="card-num">I</span><span class="card-title">Study & Site Information</span>
-      <div style="display:flex;gap:6px;margin-left:auto" onclick="event.stopPropagation()">
-        <select id="siteProfileSelect" onchange="loadSiteProfile(this.value)" style="font-size:11px;padding:3px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);max-width:140px">
-          <option value="">기관 프로파일...</option>
+      <div style="display:flex;gap:6px;margin-left:auto;align-items:center" onclick="event.stopPropagation()">
+        <label class="na-all-btn" title="과제 JSON 불러오기" style="cursor:pointer;background:rgba(127,90,240,.15);border-color:rgba(127,90,240,.4);color:#9d7fea">
+          📂 과제 로드
+          <input type="file" accept=".json" style="display:none" onchange="loadStudyJson(this)">
+        </label>
+        <button class="na-all-btn" onclick="exportStudyJson()" title="현재 과제 정보 JSON으로 내보내기" style="background:rgba(61,217,164,.1);border-color:rgba(61,217,164,.3);color:#3dd9a4">📤 과제 저장</button>
+        <select id="siteProfileSelect" onchange="loadSiteProfile(this.value)" style="font-size:11px;padding:3px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);max-width:130px">
+          <option value="">기관 선택...</option>
         </select>
-        <button class="na-all-btn" onclick="saveSiteProfile()" title="현재 기관 정보 저장">💾 저장</button>
+        <button class="na-all-btn" onclick="saveSiteProfile()" title="현재 기관 정보 저장">💾</button>
       </div>
       <span class="card-toggle open" id="tog-study">▼</span>
     </div>
@@ -3426,6 +3431,123 @@ function exportReportByKey(key) {
 // CONFIRMATION LETTER
 // ============================================================
 
+// ============================================================
+// 과제 JSON 로드 / 내보내기
+// ============================================================
+
+// 현재 로드된 과제 데이터 (메모리)
+let currentStudy = null;
+
+function loadStudyJson(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const study = JSON.parse(e.target.result);
+
+      // 필수 필드 검증
+      if (!study.sites || !Array.isArray(study.sites)) {
+        showToast('❌ 올바른 과제 JSON 형식이 아닙니다'); return;
+      }
+
+      currentStudy = study;
+
+      // localStorage에 저장 (다음 접속 시 유지)
+      localStorage.setItem('cra_current_study', JSON.stringify(study));
+
+      // Sponsor 자동 입력
+      const sponsorEl = document.getElementById('sponsor');
+      if (sponsorEl && study.sponsor) sponsorEl.value = study.sponsor;
+
+      // SITE_PI_MAP 동적 업데이트
+      applyStudyToSiteMap(study);
+
+      // 기관 드롭다운 갱신
+      renderSiteProfiles();
+
+      // 토스트
+      showToast(`✅ [${study.studyName}] 로드 완료 — ${study.sites.length}개 기관`);
+
+    } catch(err) {
+      showToast('❌ JSON 파싱 실패: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+function applyStudyToSiteMap(study) {
+  // 기존 SITE_PI_MAP 초기화 후 과제 기관 정보로 덮어쓰기
+  Object.keys(SITE_PI_MAP).forEach(k => delete SITE_PI_MAP[k]);
+  (study.sites || []).forEach(site => {
+    if (site.name && site.pi) {
+      SITE_PI_MAP[site.name] = site.pi;
+    }
+  });
+}
+
+function exportStudyJson() {
+  // 현재 입력된 정보 + 기관 프로파일로 JSON 구성
+  const sponsor   = document.getElementById('sponsor')?.value || '';
+  const studyName = prompt('과제명을 입력하세요 (예: POTENTIAL-P)', currentStudy?.studyName || '');
+  if (!studyName) return;
+
+  // localStorage의 기관 프로파일 수집
+  const SITE_PREFIX = 'cra_site_';
+  const sites = Object.keys(localStorage)
+    .filter(k => k.startsWith(SITE_PREFIX))
+    .map(k => {
+      try { return JSON.parse(localStorage.getItem(k)); } catch { return null; }
+    })
+    .filter(Boolean)
+    .map(p => ({
+      name:       p.siteName || '',
+      siteNo:     p.siteNo || '',
+      pi:         p.pi || '',
+      crc:        p.crc || '',
+      pharmacist: p.pharmacist || ''
+    }));
+
+  const json = {
+    studyName,
+    sponsor,
+    protocolNo: currentStudy?.protocolNo || '',
+    sites
+  };
+
+  const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = studyName.replace(/\s/g, '_') + '_study.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ 과제 JSON 내보내기 완료');
+}
+
+function loadSiteFromStudy(siteName) {
+  // 과제 JSON에서 해당 기관 정보 자동 채우기
+  if (!currentStudy) return false;
+  const site = currentStudy.sites.find(s =>
+    s.name === siteName ||
+    siteName.includes(s.name) ||
+    s.name.includes(siteName)
+  );
+  if (!site) return false;
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+  set('sponsor',    currentStudy.sponsor);
+  set('siteName',   site.name);
+  set('siteNo',     site.siteNo);
+  set('pi',         site.pi);
+  set('crc',        site.crc);
+  set('pharmacist', site.pharmacist);
+  return true;
+}
+
+
 // 기관-PI 매핑 (POTENTIAL-P 프로토콜 기준)
 const SITE_PI_MAP = {
   '화순전남대학교병원':       '양덕환',
@@ -3954,6 +4076,22 @@ function saveSettings() {
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
   renderSavedReports();
+
+  // 저장된 과제 복원
+  const savedStudy = localStorage.getItem('cra_current_study');
+  if (savedStudy) {
+    try {
+      currentStudy = JSON.parse(savedStudy);
+      applyStudyToSiteMap(currentStudy);
+      // Sponsor 자동 복원
+      const sponsorEl = document.getElementById('sponsor');
+      if (sponsorEl && currentStudy.sponsor && !sponsorEl.value) {
+        sponsorEl.value = currentStudy.sponsor;
+      }
+      showToast(`📂 [${currentStudy.studyName}] 과제 정보 복원됨`, 2000);
+    } catch(e) { localStorage.removeItem('cra_current_study'); }
+  }
+
   renderSiteProfiles();
 });
 
@@ -3980,8 +4118,17 @@ function saveSiteProfile() {
 
 function loadSiteProfile(siteName) {
   if (!siteName) return;
+
+  // 1순위: 과제 JSON에서 직접 로드 (CRC/약사까지 포함)
+  if (loadSiteFromStudy(siteName)) {
+    showToast('✅ ' + siteName + ' — 과제 정보 로드 완료');
+    document.getElementById('siteProfileSelect').value = '';
+    return;
+  }
+
+  // 2순위: localStorage 저장 프로파일
   const raw = localStorage.getItem(SITE_PREFIX + siteName);
-  if (!raw) return;
+  if (!raw) { showToast('⚠️ 저장된 프로파일 없음: ' + siteName); return; }
   const p = JSON.parse(raw);
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   set('sponsor', p.sponsor); set('pi', p.pi); set('siteName', p.siteName);
@@ -3993,11 +4140,21 @@ function loadSiteProfile(siteName) {
 function renderSiteProfiles() {
   const sel = document.getElementById('siteProfileSelect');
   if (!sel) return;
-  const keys = Object.keys(localStorage).filter(k => k.startsWith(SITE_PREFIX)).sort();
-  sel.innerHTML = '<option value="">기관 프로파일...</option>' +
-    keys.map(k => {
-      const name = k.replace(SITE_PREFIX, '');
-      return `<option value="${name}">${name}</option>`;
+
+  // 저장된 기관 프로파일
+  const savedKeys = Object.keys(localStorage).filter(k => k.startsWith(SITE_PREFIX)).sort();
+
+  // 과제 JSON에 있는 기관 목록 (저장된 프로파일에 없는 것도 포함)
+  const studySites = (currentStudy?.sites || []).map(s => s.name);
+  const savedNames = savedKeys.map(k => k.replace(SITE_PREFIX, ''));
+
+  // 합집합 (과제 기관 우선, 중복 제거)
+  const allNames = [...new Set([...studySites, ...savedNames])].sort();
+
+  sel.innerHTML = '<option value="">기관 선택...</option>' +
+    allNames.map(name => {
+      const hasSaved = savedNames.includes(name);
+      return `<option value="${name}">${name}${hasSaved ? ' ✓' : ''}</option>`;
     }).join('');
 }
 
