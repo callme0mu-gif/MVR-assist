@@ -528,6 +528,12 @@
   <div class="card" id="card-study">
     <div class="card-header" onclick="toggleCard('study')">
       <span class="card-num">I</span><span class="card-title">Study & Site Information</span>
+      <div style="display:flex;gap:6px;margin-left:auto" onclick="event.stopPropagation()">
+        <select id="siteProfileSelect" onchange="loadSiteProfile(this.value)" style="font-size:11px;padding:3px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);max-width:140px">
+          <option value="">기관 프로파일...</option>
+        </select>
+        <button class="na-all-btn" onclick="saveSiteProfile()" title="현재 기관 정보 저장">💾 저장</button>
+      </div>
       <span class="card-toggle open" id="tog-study">▼</span>
     </div>
     <div class="card-body">
@@ -3363,6 +3369,50 @@ function exportReportByKey(key) {
   a.click();
   URL.revokeObjectURL(url);
   showToast('📤 내보내기 완료: ' + a.download);
+}
+
+
+// ── F/U Letter XML 헬퍼 함수들 ──
+function replaceParaById(xml, paraId, newPara) {
+  const re = new RegExp('<w:p[^>]*w14:paraId="' + paraId + '"[^>]*>[\\s\\S]*?<\/w:p>');
+  return xml.replace(re, newPara);
+}
+
+function replaceEnrValues(xml, vals) {
+  const tblRe = /<w:tbl>[\s\S]*?<\/w:tbl>/;
+  const tblMatch = xml.match(tblRe);
+  if (!tblMatch) return xml;
+  let tblXml = tblMatch[0];
+  const rows = tblXml.match(/<w:tr[ >][\s\S]*?<\/w:tr>/g) || [];
+  if (rows.length < 2) return xml;
+  let newValRow = rows[1];
+  const cells = newValRow.match(/<w:tc>[\s\S]*?<\/w:tc>/g) || [];
+  cells.forEach((cell, i) => {
+    if (i < vals.length) {
+      const newCell = cell.replace(/<w:t[^>]*>[^<]*<\/w:t>/, '<w:t>' + vals[i] + '<\/w:t>');
+      newValRow = newValRow.replace(cell, newCell);
+    }
+  });
+  return xml.replace(tblMatch[0], tblXml.replace(rows[1], newValRow));
+}
+
+function buildPDTable(pdItems, esc) {
+  const hRow = '<w:tr><w:tc><w:tcPr><w:tcW w:w="701" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Subject No.</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="3599" w:type="pct"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>미준수 내용</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="700" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>분류</w:t></w:r></w:p></w:tc></w:tr>';
+  const dRows = pdItems.length > 0
+    ? pdItems.map(function(it) { return '<w:tr><w:tc><w:tcPr><w:tcW w:w="701" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>' + esc(it.pdSubj||it.subj||'-') + '</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="3599" w:type="pct"/></w:tcPr><w:p><w:r><w:t xml:space="preserve">' + esc(it.desc) + '</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="700" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>' + esc(it.pdGrade||it.grade||'Minor') + '</w:t></w:r></w:p></w:tc></w:tr>'; }).join('')
+    : '<w:tr><w:tc><w:tcPr><w:tcW w:w="701" w:type="pct"/></w:tcPr><w:p><w:r><w:t>-</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="3599" w:type="pct"/></w:tcPr><w:p><w:r><w:t>-</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="700" w:type="pct"/></w:tcPr><w:p><w:r><w:t>-</w:t></w:r></w:p></w:tc></w:tr>';
+  return '<w:tbl><w:tblPr><w:tblStyle w:val="a3"/><w:tblW w:w="5000" w:type="pct"/></w:tblPr><w:tblGrid><w:gridCol/><w:gridCol/><w:gridCol/></w:tblGrid>' + hRow + dRows + '</w:tbl>';
+}
+
+function replacePDTable(xml, newTable) {
+  const tables = xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g) || [];
+  if (tables.length < 2) return xml;
+  return xml.replace(tables[1], newTable);
+}
+
+function replaceOtherIssues(xml, newParas) {
+  const re = /<w:p[^>]*w14:paraId="0FE19F50"[^>]*>[\s\S]*?<\/w:p>[\s\S]*?<w:p[^>]*w14:paraId="07E39127"[^>]*>[\s\S]*?<\/w:p>/;
+  return xml.replace(re, newParas);
 }
 
 
