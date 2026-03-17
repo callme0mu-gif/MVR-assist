@@ -480,7 +480,7 @@
   </div>
 </div>
 <!-- API KEY SETTINGS MODAL -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeSettingsOutside(event)">
+<div class="modal-overlay" id="settingsModal" onclick="closeSettingsOutside(event)">
   <div class="modal">
     <div class="modal-title">⚙ API 설정</div>
     <div class="modal-desc">
@@ -3625,6 +3625,10 @@ async function downloadSOP() {
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+function closeSettingsOutside(e) {
+  if (e.target === document.getElementById('settingsModal')) closeSettings();
 }
 
 function openSettings() {
