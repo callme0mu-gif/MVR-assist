@@ -3426,13 +3426,52 @@ function exportReportByKey(key) {
 // CONFIRMATION LETTER
 // ============================================================
 
+// 기관-PI 매핑 (POTENTIAL-P 프로토콜 기준)
+const SITE_PI_MAP = {
+  '화순전남대학교병원':       '양덕환',
+  '화순 전남대학교병원':      '양덕환',
+  '삼성서울병원':             '김원석',
+  '서울아산병원':             '윤덕현',
+  '재단법인 아산사회복지재단 서울아산병원': '윤덕현',
+  '서울대학교병원':           '변자민',
+  '분당서울대학교병원':       '이정옥',
+  '분당 서울대학교병원':      '이정옥',
+  '가톨릭대학교 여의도성모병원': '전영우',
+  '여의도성모병원':           '전영우',
+  '울산대학교병원':           '조재철',
+  '울산공업학원 울산대학교병원': '조재철',
+  '국립암센터':               '엄현석',
+  '고신대학교 복음병원':      '이호섭',
+  '고신대복음병원':           '이호섭',
+  '칠곡경북대학교병원':       '백동원',
+  '칠곡 경북대학교병원':      '백동원',
+  '이화여자대학교 의과대학 부속 목동병원': '박영훈',
+  '이대목동병원':             '박영훈',
+  '동아대학교병원':           '오성용',
+  '가톨릭대학교 서울성모병원': '민기준',
+  '서울성모병원':             '민기준',
+  '아주대학교병원':           '정성현',
+};
+
+function getPI(siteName) {
+  if (!siteName) return '';
+  // 정확히 일치
+  if (SITE_PI_MAP[siteName]) return SITE_PI_MAP[siteName];
+  // 부분 포함으로 탐색
+  for (const [key, pi] of Object.entries(SITE_PI_MAP)) {
+    if (siteName.includes(key) || key.includes(siteName)) return pi;
+  }
+  return '';
+}
+
+
 const CONF_CHECK_DEFAULTS = [
   { id:'동의서확인',    label:'동의서 확인',                       prep:'동의서 서명본',  on:true },
   { id:'선정제외',      label:'선정/제외 기준 확인',               prep:null,             on:true },
   { id:'안전성',        label:'이상반응 확인',                     prep:null,             on:true },
   { id:'sdv',           label:'Source Document Verification (SDV)', prep:'근거문서 및 eCRF 작성', on:true },
   { id:'ip확인',        label:'임상시험용의약품/의료기기 확인',     prep:null,             on:true },
-  { id:'isf',           label:'ISF, Pharmacy Binder 검토',         prep:'ISF, Pharmacy Binder를 포함한 Binder 일체', on:true },
+  { id:'isf',           label:'ISF, Subject Binder, Pharmacy Binder 검토', prep:'ISF, Subject Binder, Pharmacy Binder를 포함한 Binder 일체', on:true },
   { id:'crf',           label:'CRF 수거',                          prep:'CRF 작성',       on:false },
   { id:'pk',            label:'PK Sample(Plasma / CSF) 확인',      prep:null,             on:false },
 ];
@@ -3443,6 +3482,13 @@ function showConfModal() {
   if (d.visitDate) document.getElementById('conf_date').value = d.visitDate;
   if (d.crc)        document.getElementById('conf_attendees').value =
     d.crc + ' CRC' + (d.pharmacist ? ', ' + d.pharmacist + ' 관리약사(변동가능)' : '');
+
+  // 기관명으로 PI 자동 채우기 (없으면 기존 pi 값 사용)
+  const autoPI = getPI(d.siteName) || d.pi || '';
+  if (autoPI && !document.getElementById('pi')?.value) {
+    const piEl = document.getElementById('pi');
+    if (piEl) piEl.value = autoPI;
+  }
 
   // 체크 항목 렌더링
   const chkDiv  = document.getElementById('conf_check_items');
@@ -3500,12 +3546,14 @@ function fillConfLetterXml(xml, data) {
   xml = replaceParaById(xml, '22A3251B',
     `<w:p><w:pPr><w:wordWrap/></w:pPr>${makeRun('Send Date: '+sendDate)}</w:p>`);
 
-  // 2. 수신인
+  // 2. 수신인 (기관명으로 PI 자동 조회, 없으면 입력값 사용)
+  const piName = getPI(data.siteName) || data.pi || '';
   xml = replaceParaById(xml, '0D0D93DE',
-    `<w:p><w:pPr><w:wordWrap/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr>${makeRun((data.siteName||'')+', '+(data.pi||'')+' 교수님께', true)}</w:p>`);
+    `<w:p><w:pPr><w:wordWrap/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr>${makeRun((data.siteName||'')+', '+(piName)+' 교수님께', true)}</w:p>`);
 
   // 3. 인사말
-  const greet = `안녕하십니까? ${data.sponsor||'Sponsor'} POTENTIAL-P 과제를 담당하고 있는 CRO ㈜심유 CRA 허영무 입니다.`;
+  const sponsor = data.sponsor || '㈜노보메디슨';
+  const greet = `안녕하십니까? ${sponsor} POTENTIAL-P 과제를 담당하고 있는 CRO ㈜심유 CRA 허영무 입니다.`;
   xml = replaceParaById(xml, '4239A3FA',
     `<w:p><w:pPr><w:wordWrap/></w:pPr>${makeRun(greet)}</w:p>`);
 
