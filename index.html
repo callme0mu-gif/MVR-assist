@@ -3923,6 +3923,14 @@ function closeSettingsOutside(e) {
 }
 
 function openSettings() {
+  // 저장된 API 설정 복원
+  const savedKey   = localStorage.getItem('cra_api_key') || '';
+  const savedProxy = localStorage.getItem('cra_proxy_url') || '';
+  const keyEl   = document.getElementById('apiKeyInput');
+  const proxyEl = document.getElementById('proxyUrlInput');
+  if (keyEl)   keyEl.value   = savedKey;
+  if (proxyEl) proxyEl.value = savedProxy;
+
   document.getElementById('settingsModal').style.display = 'flex';
   document.getElementById('settingsModal').onclick = (e) => {
     if (e.target === document.getElementById('settingsModal')) closeSettings();
@@ -3932,23 +3940,21 @@ function closeSettings() {
   document.getElementById('settingsModal').style.display = 'none';
 }
 function saveSettings() {
-  const key = document.getElementById('apiKeyInput').value.trim();
+  const key   = document.getElementById('apiKeyInput').value.trim();
   const proxy = document.getElementById('proxyUrlInput').value.trim();
-  if (key) localStorage.setItem('cra_api_key', key);
+  // 값이 있으면 저장, 없으면 삭제 (초기화 가능)
+  if (key)   localStorage.setItem('cra_api_key', key);
+  else       localStorage.removeItem('cra_api_key');
   if (proxy) localStorage.setItem('cra_proxy_url', proxy);
+  else       localStorage.removeItem('cra_proxy_url');
   closeSettings();
-  showToast('✅ 설정 저장 완료');
+  showToast('✅ API 설정 저장 완료 — 다음 접속 시에도 유지됩니다');
 }
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
   renderSavedReports();
   renderSiteProfiles();
-  // API 설정 복원
-  const key = localStorage.getItem('cra_api_key');
-  const proxy = localStorage.getItem('cra_proxy_url');
-  if (key) { const el = document.getElementById('apiKeyInput'); if (el) el.value = key; }
-  if (proxy) { const el = document.getElementById('proxyUrlInput'); if (el) el.value = proxy; }
 });
 
 // ============================================================
