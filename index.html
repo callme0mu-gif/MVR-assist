@@ -467,24 +467,18 @@
       </select>
     </div>
     <div id="savedReportsList" style="max-height:360px;overflow-y:auto;margin:4px 0"></div>
-    <!-- 이름으로 저장 -->
     <div style="margin-top:12px;display:flex;gap:8px">
       <input id="saveNameInput" type="text" placeholder="레포트 이름 (예: 서울대_IMV3)" style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
       <button class="modal-save-btn" onclick="saveReportAs()">💾 이름으로 저장</button>
     </div>
-    <!-- 파일 내보내기/가져오기 -->
     <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
       <span style="font-size:11px;color:var(--text3);flex:1">💡 다른 PC에서 이어서 작업하려면 파일로 내보내기 후 가져오기</span>
       <button class="export-btn" onclick="exportCurrentReport()">📤 파일로 내보내기</button>
-      <label class="import-btn">
-        📥 파일 가져오기
-        <input type="file" accept=".json" style="display:none" onchange="importReport(this)">
-      </label>
+      <label class="import-btn">📥 파일 가져오기<input type="file" accept=".json" style="display:none" onchange="importReport(this)"></label>
       <button class="modal-cancel-btn" onclick="closeLoadModal()">닫기</button>
     </div>
   </div>
 </div>
-
 <!-- API KEY SETTINGS MODAL -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeSettingsOutside(event)">
   <div class="modal">
@@ -530,41 +524,23 @@
 <!-- ========== FORM ========== -->
 <div class="form-panel">
 
-  <!-- 이전 MVR 업로드 섹션 -->
-  <div class="prev-mvr-upload-bar">
-    <div class="prev-mvr-title">📂 이전 MVR 불러오기</div>
-    <div class="prev-mvr-desc">이전 방문 MVR을 업로드하면 기본정보, F/U 항목, Enrollment 등이 자동으로 채워집니다.</div>
-    <div class="prev-mvr-actions">
-      <button class="prev-mvr-btn" onclick="document.getElementById('fuFileInput').click()">
-        📎 이전 MVR 업로드 (.docx / .pdf)
-      </button>
-      <span id="prevMvrFileNames" class="prev-mvr-filenames"></span>
-    </div>
-  </div>
-
   <!-- STUDY INFO -->
   <div class="card" id="card-study">
     <div class="card-header" onclick="toggleCard('study')">
       <span class="card-num">I</span><span class="card-title">Study & Site Information</span>
-      <div style="display:flex;gap:6px;margin-left:auto" onclick="event.stopPropagation()">
-        <select id="siteProfileSelect" onchange="loadSiteProfile(this.value)" style="font-size:11px;padding:3px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);max-width:140px">
-          <option value="">기관 프로파일...</option>
-        </select>
-        <button class="na-all-btn" onclick="saveSiteProfile()" title="현재 기관 정보 저장">💾 저장</button>
-      </div>
       <span class="card-toggle open" id="tog-study">▼</span>
     </div>
     <div class="card-body">
       <div class="field-row">
-        <div class="field"><label>Sponsor</label><input type="text" id="sponsor" placeholder="의뢰자명"></div>
-        <div class="field"><label>Site No.</label><input type="text" id="siteNo" placeholder="Site No."></div>
+        <div class="field"><label>Sponsor</label><input type="text" id="sponsor" placeholder="㈜노보메디슨"></div>
+        <div class="field"><label>Site No.</label><input type="text" id="siteNo" placeholder="06"></div>
       </div>
-      <div class="field"><label>기관명</label><input type="text" id="siteName" placeholder="기관명"></div>
+      <div class="field"><label>기관명</label><input type="text" id="siteName" placeholder="가톨릭대학교 여의도성모병원"></div>
       <div class="field-row">
-        <div class="field"><label>PI (시험책임자)</label><input type="text" id="pi" placeholder="PI 성명"></div>
-        <div class="field"><label>CRC</label><input type="text" id="crc" placeholder="CRC 성명"></div>
+        <div class="field"><label>PI (시험책임자)</label><input type="text" id="pi" placeholder="전영우"></div>
+        <div class="field"><label>CRC</label><input type="text" id="crc" placeholder="이유진"></div>
       </div>
-      <div class="field"><label>관리약사</label><input type="text" id="pharmacist" placeholder="관리약사 성명"></div>
+      <div class="field"><label>관리약사</label><input type="text" id="pharmacist" placeholder="김민경"></div>
     </div>
   </div>
 
@@ -579,13 +555,13 @@
         <div class="field"><label>방문 유형</label>
           <select id="visitType"><option>On-Site</option><option>Telephone</option><option>Remote</option></select>
         </div>
-        <div class="field"><label>방문 번호</label><input type="text" id="visitNum" placeholder="방문 번호"></div>
+        <div class="field"><label>방문 번호</label><input type="text" id="visitNum" placeholder="5"></div>
       </div>
       <div class="field-row">
         <div class="field"><label>방문일</label><input type="date" id="visitDate"></div>
         <div class="field"><label>이전 방문일</label><input type="date" id="lastVisitDate"></div>
       </div>
-      <div class="field"><label>이전 방문 구분</label><input type="text" id="lastVisitType" placeholder="예: On-Site IMV #2"></div>
+      <div class="field"><label>이전 방문 구분</label><input type="text" id="lastVisitType" placeholder="IMV #3,4"></div>
     </div>
   </div>
 
@@ -619,25 +595,6 @@
       <button class="gen-all-btn" id="genAllBtn" onclick="generateAllComments()">✦ 입력된 항목 전체 AI 코멘트 생성</button>
     </div>
     <div class="card-body" id="checklistBody" style="padding-top:4px;max-height:400px;overflow-y:auto"></div>
-  </div>
-
-  <!-- IRB TRACKER -->
-  <div class="card" id="card-irb-tracker">
-    <div class="card-header" onclick="toggleCard('irb-tracker')">
-      <span class="card-num">IRB</span><span class="card-title">IRB Tracker</span>
-      <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('irbTrackerInput').click()" title="IRB Tracking Log xlsx 업로드">📎 IRB Tracker</button>
-      <input type="file" id="irbTrackerInput" accept=".xlsx,.xls" style="display:none" onchange="parseIRBTracker(this)">
-      <span class="card-toggle open" id="tog-irb-tracker">▼</span>
-    </div>
-    <div class="card-body">
-      <div id="irbTrackerResult" style="font-size:12px;color:var(--text2)">
-        📎 IRB Tracker xlsx를 업로드하면 지난 방문 이후 IRB 제출 내역이 자동으로 정리됩니다.
-      </div>
-      <div class="field" style="margin-top:8px">
-        <label>이전 방문일 (기준일 - 이후 제출건만 추출)</label>
-        <input type="date" id="irbCutoffDate">
-      </div>
-    </div>
   </div>
 
   <!-- ICF SUMMARY -->
@@ -697,7 +654,8 @@
   <div class="card" id="card-fu">
     <div class="card-header" onclick="toggleCard('fu')">
       <span class="card-num">F/U</span><span class="card-title">Follow-up Items</span>
-      <input type="file" id="fuFileInput" accept=".docx,.pdf" multiple style="display:none" onchange="parsePrevMVR(this)">
+      <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('fuFileInput').click()" title="이전 MVR docx 업로드 → Old F/U 자동 이월">📎 이전 MVR</button>
+      <input type="file" id="fuFileInput" accept=".docx,.pdf" style="display:none" onchange="parsePrevMVR(this)">
       <span class="card-toggle open" id="tog-fu">▼</span>
     </div>
     <div class="card-body">
@@ -713,7 +671,10 @@
   <!-- BUTTONS -->
   <div class="gen-wrap">
     <button class="gen-btn" onclick="generateReport()">✦ 보고서 미리보기</button>
-    <button class="sop-btn" id="sopBtn" onclick="downloadSOP()" style="flex:none;padding:13px 18px">📋 SOP 양식 다운로드</button>
+    <button class="docx-btn" id="docxBtn" onclick="downloadDocx()">📄 Word 다운로드</button>
+  </div>
+  <div class="gen-wrap" style="margin-top:-8px">
+    <button class="sop-btn" id="sopBtn" onclick="downloadSOP()">📋 SOP 양식 다운로드</button>
   </div>
   <div style="height:20px"></div>
 
@@ -724,9 +685,7 @@
   <div class="prev-header">
     <div class="prev-title">보고서 미리보기</div>
     <div class="prev-actions">
-      <button class="btn-sm" onclick="copyReport()">📋 서식 복사</button>
-      <button class="btn-sm" onclick="selectAllReport()">✂ 전체 선택</button>
-      <button class="btn-sm" style="background:rgba(61,217,164,.1);color:#3dd9a4;border-color:rgba(61,217,164,.3)" onclick="generateFULetter()">✉ F/U Letter</button>
+      <button class="btn-sm" onclick="copyReport()">📋 텍스트 복사</button>
       <button class="btn-sm primary" onclick="generateReport()">↺ 새로고침</button>
     </div>
   </div>
@@ -740,7 +699,9 @@
 
 </div><!-- /main -->
 
+
 <script>
+
 function setAllNA(secNum) {
   const items = document.querySelectorAll(`.chk-item[data-sec="${secNum}"]`);
   let count = 0;
@@ -2126,6 +2087,54 @@ function fillSOPXml(xml, data) {
     }
   }
 
+  // ── SAE Summary ──
+  cells = getCells();
+  const saeNameIdx = findCellIdx(cells, 'SAE Name');
+  if (saeNameIdx > -1 && (data.saeList||[]).length > 0) {
+    const saeList = data.saeList;
+    const FIXED_ROWS = 3;
+    const needRows   = saeList.length;
+
+    // 3건 초과 시 데이터 행 복제 삽입 (Comments 행 22730E4B 직전)
+    if (needRows > FIXED_ROWS) {
+      const extraCount = needRows - FIXED_ROWS;
+      // SAE 표 내 첫 번째 데이터 행(행3, paraId=66D294EE) 추출
+      const dataRowRe = /<w:tr[^>]*w14:paraId="66D294EE"[^>]*>[\s\S]*?<\/w:tr>/;
+      const dataRowMatch = xml.match(dataRowRe);
+      if (dataRowMatch) {
+        const tmpl = dataRowMatch[0];
+        let insertXml = '';
+        for (let e = 0; e < extraCount; e++) {
+          let newRow = tmpl.replace(/w14:paraId="[^"]+"/g,
+            () => 'w14:paraId="' + Math.floor(Math.random()*0xEFFFFFFF+0x10000000).toString(16).toUpperCase() + '"');
+          newRow = newRow.replace(/w14:textId="[^"]+"/g, 'w14:textId="77777777"');
+          insertXml += newRow;
+        }
+        // Comments 행(22730E4B) 직전에 삽입
+        xml = xml.replace(/<w:tr[^>]*w14:paraId="22730E4B"[^>]*>[\s\S]*?<\/w:tr>/,
+          m => insertXml + m);
+      }
+    }
+
+    // 셀 채우기: 행3 이후 (헤더2행=13셀, rowStart = IRB 셀 다음)
+    cells = getCells();
+    const irbIdx = findCellIdx(cells, 'IRB');
+    if (irbIdx < 0) return xml;
+    const rowStart = irbIdx + 2; // IRB, Sponsor 서브헤더 다음 행 첫 셀
+
+    for (let i = 0; i < saeList.length; i++) {
+      const sae = saeList[i];
+      const offset = i * 7;
+      cells = getCells();
+      replaceCell(cells, rowStart+offset,   insertTextInCell(cells[rowStart+offset],   String(i+1)));                 cells=getCells();
+      replaceCell(cells, rowStart+offset+1, insertTextInCell(cells[rowStart+offset+1], sae.subj||''));                cells=getCells();
+      replaceCell(cells, rowStart+offset+2, insertTextInCell(cells[rowStart+offset+2], sae.name||''));                cells=getCells();
+      replaceCell(cells, rowStart+offset+3, insertTextInCell(cells[rowStart+offset+3], fmtDateSOP(sae.start)||''));   cells=getCells();
+      replaceCell(cells, rowStart+offset+4, insertTextInCell(cells[rowStart+offset+4], fmtDateSOP(sae.aware)||''));   cells=getCells();
+      replaceCell(cells, rowStart+offset+5, insertTextInCell(cells[rowStart+offset+5], fmtDateSOP(sae.irb)||''));     cells=getCells();
+      replaceCell(cells, rowStart+offset+6, insertTextInCell(cells[rowStart+offset+6], fmtDateSOP(sae.sponsor)||'')); cells=getCells();
+    }
+  }
   // ── SDV Summary ──
   cells = getCells();
   const reviewIdx = findCellIdx(cells, 'Review Type*');
@@ -3355,3 +3364,300 @@ function exportReportByKey(key) {
   URL.revokeObjectURL(url);
   showToast('📤 내보내기 완료: ' + a.download);
 }
+
+
+function fillFULetterXml(xml, data) {
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const makeRun = (text, bold=false) => {
+    const b = bold ? '<w:b/><w:bCs/>' : '';
+    return `<w:r><w:rPr><w:rFonts w:hint="eastAsia"/>${b}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
+  };
+  const mkItem = (text) =>
+    `<w:p><w:pPr><w:pStyle w:val="a6"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="12"/></w:numPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:leftChars="0"/><w:jc w:val="left"/></w:pPr>${makeRun(text)}</w:p>`;
+
+  const now = new Date();
+  const sendDate = String(now.getDate()).padStart(2,'0') +
+    ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+    now.getFullYear();
+
+  const visitDateKr = (() => {
+    const d = data.visitDate; if (!d) return '';
+    const dt = new Date(d);
+    return `${dt.getFullYear()}년 ${dt.getMonth()+1}월 ${dt.getDate()}일`;
+  })();
+
+  // F/U 분류
+  const allFU = [...(data.fuOld||[]).filter(f=>f.status!=='Resolved'), ...(data.fuNew||[])];
+  const icfItems   = allFU.filter(f=>f.cat==='ICF');
+  const pdItems    = allFU.filter(f=>f.cat==='Protocol Deviation');
+  const saeItems   = data.saeList||[];
+  const otherItems = allFU.filter(f=>!['ICF','Protocol Deviation'].includes(f.cat));
+
+  // ── Monitoring Activities 자동 생성 (체크리스트 기반) ──
+  const getChk = (code) => {
+    const r = document.querySelector('input[name="r_'+code+'"]:checked');
+    return r ? r.value : '';
+  };
+  const notNA = (code) => { const v = getChk(code); return v && v !== 'N/A'; };
+
+  const acts = [];
+
+  // 3섹션(권리보호) → 동의서 확인
+  if (['3-1','3-2','3-3','3-4','3-5'].some(notNA)) acts.push('동의서 확인');
+
+  // 1섹션(진행상황) → 선정/제외 기준 확인
+  if (['1-1','1-2'].some(notNA)) acts.push('선정/제외 기준 확인');
+
+  // 4섹션(안전) → 이상사례 확인
+  if (['4-1','4-2','4-3','4-4'].some(notNA)) acts.push('이상사례 확인');
+
+  // 6섹션(기본문서) or SDV 데이터 → SDV
+  if (['6-1','6-2','6-3','6-4','6-5','6-6','6-7'].some(notNA) || (data.sdvList||[]).length > 0)
+    acts.push('Source Document Verification (SDV)');
+
+  // 8섹션(IP) or IP 데이터 → IP 확인
+  if (['8-1','8-2','8-3','8-4','8-5','8-6'].some(notNA) || (data.ipList||[]).length > 0)
+    acts.push('임상시험용의약품/의료기기 확인');
+
+  // 2섹션(업무위임) or 5섹션(계획서) or 9섹션(IRB) → ISF/Binder 검토
+  if (['2-1','2-2','2-4','5-1','5-2','5-3','9-1','9-2'].some(notNA))
+    acts.push('ISF, Pharmacy Binder 검토');
+
+  // CRF 관련 → CRF 수거 (아니오일 때 = 문제 있을 때)
+  if (getChk('6-4') === '아니오' || getChk('6-5') === '아니오')
+    acts.push('CRF 수거');
+
+  // 아무것도 체크 안 됐으면 기본값 5개
+  if (acts.length === 0)
+    acts.push('동의서 확인', '이상사례 확인', 'Source Document Verification (SDV)',
+              '임상시험용의약품/의료기기 확인', 'ISF, Pharmacy Binder 검토');
+
+  // Activities 문단 범위 교체 (첫 항목에 전체 삽입, 나머지 5개 제거)
+  xml = replaceParaById(xml, '7ACCF5C2', acts.map(a=>mkItem(a)).join(''));
+  ['23FD1D59','405B9B33','155DD264','4B5CF828','2FDA155F'].forEach(id => {
+    xml = replaceParaById(xml, id, '');
+  });
+
+  // 1. Send Date
+  xml = replaceParaById(xml, '22A3251B',
+    `<w:p><w:pPr><w:wordWrap/></w:pPr>${makeRun('Send Date: '+sendDate)}</w:p>`);
+
+  // 2. 수신인
+  xml = replaceParaById(xml, '0D0D93DE',
+    `<w:p><w:pPr><w:wordWrap/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr>${makeRun((data.siteName||'')+', '+(data.pi||'')+' 교수님께', true)}</w:p>`);
+
+  // 3. 인사말
+  const sponsor = data.sponsor || 'Sponsor';
+  const craName = '허영무';
+  xml = replaceParaById(xml, '11124BCD',
+    `<w:p><w:pPr><w:wordWrap/></w:pPr>${makeRun('안녕하십니까 '+sponsor+'의 POTENTIAL-P 과제를 담당하고 있는 CRO ㈜심유 CRA '+craName+' 입니다.')}</w:p>`);
+
+  // 4. 방문일
+  xml = replaceParaById(xml, '1226CE69',
+    `<w:p><w:pPr><w:wordWrap/></w:pPr>${makeRun(visitDateKr+'에 진행된 정기 기관모니터링 방문 (Monitoring Visit, MV)에 협조해 주심에 감사드리며, 이번 모니터링에서 확인한 사항은 다음과 같습니다.')}</w:p>`);
+
+  // 5. Enrollment 제목
+  xml = replaceParaById(xml, '75C94CBC',
+    `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="11"/></w:numPr><w:wordWrap/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr>${makeRun('Enrollment Status ['+visitDateKr+' 기준]', true)}</w:p>`);
+
+  // 6. Enrollment 값
+  const enrKeys = ['enrTarget','enrScreened','enrFail','enrEnrolled','enrDropout','enrCompleted','enrOngoing'];
+  xml = replaceEnrValues(xml, enrKeys.map(k => data[k]||'-'));
+
+  // 7. ICF
+  xml = replaceParaById(xml, '66808342',
+    icfItems.length > 0
+      ? icfItems.map(f=>mkItem(f.desc)).join('')
+      : mkItem('본 모니터링 방문시 확인된 ICF 관련 이슈는 없습니다.'));
+
+  // 8. Protocol
+  xml = replaceParaById(xml, '3F86E324',
+    mkItem(pdItems.length > 0
+      ? '본 모니터링 방문시 확인된 미준수 사항은 '+pdItems.length+'건입니다.'
+      : '본 모니터링 방문시 확인된 미준수 사항은 없습니다.'));
+  xml = replacePDTable(xml, buildPDTable(pdItems, esc));
+
+  // 9. SAE
+  xml = replaceParaById(xml, '24B955C6',
+    mkItem(saeItems.length > 0
+      ? '본 모니터링 방문 시 확인된 SAE는 '+saeItems.length+'건('+saeItems.map(s=>s.subj+' '+s.name).join(', ')+')입니다.'
+      : '본 모니터링 방문 시 확인된 SAE는 없습니다.'));
+
+  // 10. Other Issues
+  xml = replaceParaById(xml, '7EE920B0',
+    otherItems.length > 0
+      ? otherItems.map(f=>mkItem(f.desc)).join('')
+      : mkItem('해당 없음'));
+  xml = replaceParaById(xml, '5097EFE1', '');
+
+  // 11. 서명
+  xml = replaceParaById(xml, '07CA343D',
+    `<w:p><w:pPr><w:wordWrap/></w:pPr>${makeRun(craName+' 배상')}</w:p>`);
+
+  return xml;
+}
+
+
+
+async function generateFULetter() {
+  const data = collectAllData();
+  if (!data.siteName) { showToast('⚠️ 기관명을 먼저 입력하세요'); return; }
+  showParseOverlay('F/U Letter 생성 중...', 'Word 양식에 데이터를 채우고 있습니다');
+  try {
+    if (typeof JSZip === 'undefined') {
+      await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+    }
+    const byteStr = atob(FU_LETTER_TEMPLATE_B64);
+    const ab = new ArrayBuffer(byteStr.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+    const zip = await JSZip.loadAsync(ab);
+    let xml = await zip.file('word/document.xml').async('text');
+    xml = fillFULetterXml(xml, data);
+    zip.file('word/document.xml', xml);
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const now  = new Date();
+    const ds   = String(now.getDate()).padStart(2,'0') +
+      ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+      now.getFullYear();
+    const site = (data.siteName||'Site').replace(/\s/g,'').slice(0,8);
+    a.href     = url;
+    a.download = 'FU_Letter_IMV' + (data.visitNum||'') + '_' + site + '_' + ds + '.docx';
+    a.click();
+    URL.revokeObjectURL(url);
+    hideParseOverlay();
+    showToast('✅ F/U Letter 다운로드 완료');
+  } catch(err) {
+    hideParseOverlay();
+    console.error(err);
+    showToast('❌ F/U Letter 생성 실패: ' + err.message);
+  }
+}
+
+async function downloadSOP() {
+  const btn = document.getElementById('sopBtn');
+  if (btn) btn.disabled = true;
+  showParseOverlay('SOP 양식 생성 중...', '데이터를 채우고 있습니다');
+  try {
+    if (typeof JSZip === 'undefined') {
+      await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+    }
+    const byteStr = atob(SOP_TEMPLATE_B64);
+    const ab = new ArrayBuffer(byteStr.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+    const zip = await JSZip.loadAsync(ab);
+    let xml = await zip.file('word/document.xml').async('text');
+    const data = collectAllData();
+    xml = fillSOPXml(xml, data);
+    zip.file('word/document.xml', xml);
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    const now = new Date();
+    const ds  = String(now.getDate()).padStart(2,'0') +
+      ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()] +
+      now.getFullYear();
+    const site = (data.siteName||'Site').replace(/\s/g,'').slice(0,8);
+    a.href     = url;
+    a.download = 'MVR_' + (data.visitNum||'') + '_' + site + '_' + ds + '.docx';
+    a.click();
+    URL.revokeObjectURL(url);
+    hideParseOverlay();
+    showToast('✅ SOP 양식 다운로드 완료');
+    setTimeout(() => showToast('💡 파일이 열리지 않으면: 마우스 우클릭 → 연결 프로그램 → Word'), 2000);
+  } catch(err) {
+    hideParseOverlay();
+    console.error(err);
+    showToast('❌ 생성 실패: ' + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function openSettings() {
+  document.getElementById('settingsModal').style.display = 'flex';
+  document.getElementById('settingsModal').onclick = (e) => {
+    if (e.target === document.getElementById('settingsModal')) closeSettings();
+  };
+}
+function closeSettings() {
+  document.getElementById('settingsModal').style.display = 'none';
+}
+function saveSettings() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const proxy = document.getElementById('proxyUrlInput').value.trim();
+  if (key) localStorage.setItem('cra_api_key', key);
+  if (proxy) localStorage.setItem('cra_proxy_url', proxy);
+  closeSettings();
+  showToast('✅ 설정 저장 완료');
+}
+
+// 페이지 로드 시 초기화
+document.addEventListener('DOMContentLoaded', () => {
+  renderSavedReports();
+  renderSiteProfiles();
+  // API 설정 복원
+  const key = localStorage.getItem('cra_api_key');
+  const proxy = localStorage.getItem('cra_proxy_url');
+  if (key) { const el = document.getElementById('apiKeyInput'); if (el) el.value = key; }
+  if (proxy) { const el = document.getElementById('proxyUrlInput'); if (el) el.value = proxy; }
+});
+
+// ============================================================
+// 기관 프로파일 저장 / 불러오기
+// ============================================================
+const SITE_PREFIX = 'cra_site_';
+
+function saveSiteProfile() {
+  const siteName = document.getElementById('siteName')?.value?.trim();
+  if (!siteName) { showToast('⚠️ 기관명을 먼저 입력하세요'); return; }
+  const profile = {
+    sponsor:    document.getElementById('sponsor')?.value || '',
+    pi:         document.getElementById('pi')?.value || '',
+    siteName,
+    siteNo:     document.getElementById('siteNo')?.value || '',
+    crc:        document.getElementById('crc')?.value || '',
+    pharmacist: document.getElementById('pharmacist')?.value || '',
+  };
+  localStorage.setItem(SITE_PREFIX + siteName, JSON.stringify(profile));
+  showToast('✅ 기관 프로파일 저장: ' + siteName);
+  renderSiteProfiles();
+}
+
+function loadSiteProfile(siteName) {
+  if (!siteName) return;
+  const raw = localStorage.getItem(SITE_PREFIX + siteName);
+  if (!raw) return;
+  const p = JSON.parse(raw);
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('sponsor', p.sponsor); set('pi', p.pi); set('siteName', p.siteName);
+  set('siteNo', p.siteNo);   set('crc', p.crc); set('pharmacist', p.pharmacist);
+  showToast('✅ 기관 프로파일 불러오기: ' + siteName);
+  document.getElementById('siteProfileSelect').value = '';
+}
+
+function renderSiteProfiles() {
+  const sel = document.getElementById('siteProfileSelect');
+  if (!sel) return;
+  const keys = Object.keys(localStorage).filter(k => k.startsWith(SITE_PREFIX)).sort();
+  sel.innerHTML = '<option value="">기관 프로파일...</option>' +
+    keys.map(k => {
+      const name = k.replace(SITE_PREFIX, '');
+      return `<option value="${name}">${name}</option>`;
+    }).join('');
+}
+
+
+
+function toggleApiKeyVis() {
+  const inp = document.getElementById('apiKeyInput');
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+</script>
+</body>
+</html>
