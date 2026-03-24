@@ -4234,6 +4234,7 @@ function saveSettings() {
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
+  buildChecklist();
   renderSavedReports();
 
   // 저장된 과제 복원
